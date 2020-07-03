@@ -1,18 +1,18 @@
 import pymel.core as pm
 
-from userPrefs import user
+import user
 import utils
 
 import scaffolds as scaf
 import modules as mod
 
 # ----------------------------------------------------------------------------------------------------------------------
-'''
+"""
 
 	BUILDER.PY
 	batch builder for modules
 
-'''
+"""
 
 
 class RigException(Exception):
@@ -26,7 +26,6 @@ class Rig(object):
 		self.getModules()
 		
 		self.module_classes = utils.getFilteredDir('modules')
-		# self.module_classes.append(' ')
 
 		self.scaffold_classes = utils.getFilteredDir('scaffolds')
 	# end def __init__(self):
@@ -85,11 +84,11 @@ class Rig(object):
 	def getModules(self):
 		print('>>Fetching modules.')
 
-		if pm.objExists(user.prefs('root-joint')):
-			root_jnt = pm.PyNode(user.prefs('root-joint'))
+		if pm.objExists(user.prefs['root-joint']):
+			root_jnt = pm.PyNode(user.prefs['root-joint'])
 		else:
 			utils.makeRoot()
-			self._modules = {}
+			self._modules = []
 			return
 
 		flattened_jnts = root_jnt.getchildren(ad=True, type='joint')

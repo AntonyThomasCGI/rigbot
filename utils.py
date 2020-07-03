@@ -3,15 +3,15 @@ import pymel.core as pm
 import os
 import copy
 
-from userPrefs import user
+import user
 
 # ----------------------------------------------------------------------------------------------------------------------
-'''
+"""
 
 	UTILS.PY
-	common utility functions
+	Common utility functions
 
-'''
+"""
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -20,10 +20,7 @@ class UtilsException(Exception):
 
 
 class Colours:
-	"""
-	Colour look up dict - has to be 0-1 because stupid maya only speaks computer
-	Colour space: sRGB
-	"""
+
 	_colourRGB = {
 		"yellow":		[1.0, 	1.0, 	0.0],
 		"green":		[0.0, 	1.0, 	0.0],
@@ -39,6 +36,7 @@ class Colours:
 	def get_rgb_value(colour):
 		"""
 		Used to look up rgb colour in _colourRGB dictionary
+
 		:param colour: string name of colour
 		:return: rgb 0-1 of colour
 		"""
@@ -50,7 +48,8 @@ class Colours:
 	@staticmethod
 	def get_linear_value(colour):
 		"""
-		Used to look up rgb colour in _colourRGB dictionary and convert to linear colour space
+		Look up rgb colour in _colourRGB dictionary and convert to linear colour space
+
 		:param colour: string name of colour
 		:return: rgb 0-1 of colour converted to linear space
 		"""
@@ -108,6 +107,7 @@ controllerShapes = {
 def makeJointChain(length, name, suffix='jnt', rad=1):
 	"""
 	Used to make a chain of joints
+
 	:param length: length of joint chain
 	:param name: prefix naming convention
 	:param suffix: suffix naming convention
@@ -132,6 +132,7 @@ def makeJointChain(length, name, suffix='jnt', rad=1):
 def setOverrideColour(colour, *args):
 	"""
 	Set DAG node override colour
+
 	:param colour: colour to set override colour
 	:param args: nodes to apply change
 	"""
@@ -152,6 +153,7 @@ def setOverrideColour(colour, *args):
 def setOutlinerColour(colour, *args):
 	"""
 	Set DAG node outliner colour
+
 	:param colour: colour to set outliner colour
 	:param args: nodes to apply change
 	"""
@@ -172,6 +174,7 @@ def setOutlinerColour(colour, *args):
 def makePynodeList(*args, **kwargs):
 	"""
 	Return list of PyNodes
+
 	:param args: list, tuple, nested list of string or PyNodes to return
 	:param kwargs: node 'type' filter
 	:return:
@@ -207,6 +210,7 @@ def makePynodeList(*args, **kwargs):
 def safeMakeChildGroups(path_ls, query=False):
 	"""
 	Make hierarchy of groups or get list of PyNodes if they already exist
+
 	:param path_ls: list of dag paths eg; ['Rig|joints', 'Rig|ctrls|etc.']
 	:param query: can run in query mode to return if groups exist
 	:return: list of PyNodes
@@ -254,6 +258,7 @@ def safeMakeChildGroups(path_ls, query=False):
 def makeAttrFromDict(ob, attr_data):
 	"""
 	Creates attribute from dictionary - sets keyable=True and channelBox=True by default
+
 	:param ob: node to add attribute to
 	:param attr_data: flags for addAttr/setAttr command
 	:return:
@@ -282,14 +287,14 @@ def makeAttrFromDict(ob, attr_data):
 	else:
 		channel_box = 1
 
-	## if already has attr then delete
+	# if already has attr then delete
 	if ob.hasAttr(attr_name):
 		ob.deleteAttr(attr_name)
 
 	ob.addAttr(attr_name, **attr_data)
 	ob.setAttr(attr_name, l=lock)
 
-	## channel box flag is ignored if attr is keyable so this:
+	# channel box flag is ignored if attr is keyable so this:
 	if 'keyable' in attr_data:
 		if not attr_data[ 'keyable' ]:
 			ob.setAttr(attr_name, cb=channel_box)
@@ -299,10 +304,15 @@ def makeAttrFromDict(ob, attr_data):
 # end def makeAttrFromDict(ob, attr_data):
 
 
-## --------------------------------------------------------------------------------
-def scaleCtrlShape(scle, line_width, *args):
-	## scle (float, int) = how much to scale ctrl
-	## line_width (float, int) = set ctrl line width
+# ----------------------------------------------------------------------------------------------------------------------
+def scaleCtrlShape(scale_mult, line_width, *args):
+	"""
+	Scale ctrl shapes and set line width
+
+	:param scale_mult: (float, int) how much to scale ctrl
+	:param line_width: (float, int) set ctrl line width
+	:param args: list of transform nodes to change
+	"""
 
 	ctrl_ls = makePynodeList(args)
 
@@ -312,60 +322,65 @@ def scaleCtrlShape(scle, line_width, *args):
 			if 'nurbsCurve' in shape.nodeType():
 				num_cv = pm.getAttr('{}.cp'.format(shape), s=1)
 				for i in range(num_cv):
-					cv_ws = pm.xform('{}.cv[{}]'.format(shape, i) , t=True,
+					cv_ws = pm.xform('{}.cv[{}]'.format(shape, i), t=True,
 						q=True)
-					pm.xform('{}.cv[{}]'.format(shape, i) , t=[ (cv_ws[0]*scle),
-												(cv_ws[1]*scle), (cv_ws[2]*scle) ])
+					pm.xform('{}.cv[{}]'.format(shape, i), t=[(cv_ws[0]*scale_mult),
+												(cv_ws[1]*scale_mult), (cv_ws[2]*scale_mult)])
 				shape.lineWidth.set(line_width)
-# end def scaleCtrlShape(scle, line_width, *args):
+# end def scaleCtrlShape(scale_mult, line_width, *args):
 
 
-## --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 def lockHide(attr_data, *args):
-	## attr_data (dictionary) = attrs to lock hide
-	##		eg: {'r':1, 's':'xy', 't':'z', 'v':1, 'custom_attr':1}
-	##		also accepts 'all' to lock/hide all default channels
-	## hide (bool) = also hides the attr if True
-	## args = list of nodes to lockHide
+	"""
+	Lock and hide attributes from dictionary
+
+	:param attr_data: 	(dictionary) attrs to lock hide eg: {'r':1, 's':'xy', 't':'z', 'v':1, 'custom_attr':1}
+						also accepts 'all' to lock/hide all default channels
+	:param args:		list of nodes to lockHide
+	"""
 	
 	objs = makePynodeList(args)
 	
 	to_lock = []
 	
 	for item, axis in attr_data.items():
-		if any([ s == item for s in ['t', 'r', 's', 'translate', 'rotate', 
-									'scale'] ]):
-		    ## as well as 'xyz' axis can be 1 or 0 so:
+		if any([ s == item for s in ['t', 'r', 's', 'translate', 'rotate', 'scale'] ]):
+			# as well as 'xyz' axis can be 1 or 0 so:
 			if isinstance(axis, int) and axis:
 				for channel in ['x', 'y', 'z']:
 					to_lock.append(item + channel)
 			else:
 				for i in range(len(axis)):
 					to_lock.append(item + axis[i])
-		## special case 'all'
+
+		# special case 'all'
 		elif item == 'all':
-			for default_attr in ['tx', 'ty', 'tz', 'rx', 'ry', 'rz', 'sx', 'sy', 
-								'sz', 'v']:
+			for default_attr in ['tx', 'ty', 'tz', 'rx', 'ry', 'rz', 'sx', 'sy', 'sz', 'v']:
 				to_lock.append(default_attr)
-        ## attrs with no xyz values eg; custom attrs or visibility
+
+		# attrs with no xyz values eg; custom attrs or visibility
 		else:
 			if axis:
 				to_lock.append(item)
 				
 	for ob in objs:
-	    for attr in to_lock:
-	        pm.setAttr('{}.{}'.format(ob, attr), lock=True, keyable=False,
-	        										channelBox=False)
+		for attr in to_lock:
+			pm.setAttr('{}.{}'.format(ob, attr), lock=True, keyable=False, channelBox=False)
 # end def lockHide(attr_data, *args):
 
 
-
-
-## --------------------------------------------------------------------------------
-##							  RIG BOT UTILITY FUNCTIONS
-## --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# .											RIG BOT UTILITY FUNCTIONS
+# ----------------------------------------------------------------------------------------------------------------------
 
 def getFilteredDir(folder):
+	"""
+	Return list of files in give folder
+
+	:param folder: string name of folder within rigbot dir
+	:return: string name of python files that are not __init__ or end with Base.py
+	"""
 
 	main_dir = os.path.dirname(os.path.realpath(__file__))
 	
@@ -378,30 +393,32 @@ def getFilteredDir(folder):
 # end def getFilteredDir(folder):
 
 
-## --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 def makeRoot():
-	if pm.objExists(user.prefs('root-joint')):
-		root_jnt = pm.PyNode(user.prefs('root-joint'))
+	"""
+	Returns pynode of root joint or creates new one if none exists
+
+	:return: root joint
+	"""
+	if pm.objExists(user.prefs['root-joint']):
+		root_jnt = pm.PyNode(user.prefs['root-joint'])
 	else:
 		pm.select(deselect=True)
-		root_jnt = pm.joint(n=user.prefs('root-joint'), radius=0.001)
+		root_jnt = pm.joint(n=user.prefs['root-joint'], radius=0.001)
 
-		ctrl = pm.curve(d=1, p=controllerShapes[ 'locator' ],
-						n=(user.prefs('root-joint') + '_display'))
+		ctrl = pm.curve(d=1, p=controllerShapes['locator'], n=(user.prefs['root-joint'] + '_display'))
 		scaleCtrlShape(1.43, 3, ctrl)
 
 		ctrl_shape = ctrl.getChildren()[0]
-		setOverrideColour(user.prefs('module-root-colour'),
-								[root_jnt, ctrl_shape])
-		setOutlinerColour(user.prefs('module-root-colour'),
-								root_jnt)
+		setOverrideColour(user.prefs['module-root-colour'], [root_jnt, ctrl_shape])
+		setOutlinerColour(user.prefs['module-root-colour'], root_jnt)
 
 		pm.parent(ctrl_shape, root_jnt, r=True, s=True)
 		pm.delete(ctrl)
 
 		tags = [
-		{ 'name':'RB_MODULE_ROOT', 'at':'enum', 'en':' ', 'k':0, 'l':1 },
-		{ 'name':'RB_module_type', 'k':0, 'at':'enum', 'en':'root' },
+		{'name':'RB_MODULE_ROOT', 'at':'enum', 'en':' ', 'k':0, 'l':1},
+		{'name':'RB_module_type', 'k':0, 'at':'enum', 'en':'root'},
 		]
 		for tag in tags:
 			makeAttrFromDict(root_jnt, tag)
@@ -410,13 +427,19 @@ def makeRoot():
 # end def makeRoot():
 
 
-## --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 def getModuleChildren(modroot):
+	"""
+	Find all the child joints within a module
 
-	if pm.objExists(user.prefs('root-joint')):
-		root_jnt = pm.PyNode(user.prefs('root-joint'))
+	:param modroot: module root
+	:return: list of modules joints including module root
+	"""
+
+	if pm.objExists(user.prefs['root-joint']):
+		root_jnt = pm.PyNode(user.prefs['root-joint'])
 	else:
-		raise UtilsException('--{}: does not exist!'.format(user.prefs('root-joint')))
+		raise UtilsException('--{}: does not exist!'.format(user.prefs['root-joint']))
 
 	flattened_jnts = root_jnt.getChildren(ad=True, type='joint')
 

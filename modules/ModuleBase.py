@@ -2,28 +2,28 @@ import pymel.core as pm
 
 from .. import utils
 
-## --------------------------------------------------------------------------------
-'''
+# --------------------------------------------------------------------------------
+"""
 
 	MODULEBASE.PY
 	contains base class for creating rig modules
 
-'''
+"""
 
-## --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 class ModuleException(Exception):
 	pass
 
-class Module(object):
+class ModuleBase(object):
 
 	"""
-	Inherrit from this class ..blah blah
+	Inherit from this class ..blah blah
 
 	"""
 
-	def __init__():
-	pass
+	def __init__(self):
+		pass
 	# end def __init__(self):
 
 
@@ -50,4 +50,3 @@ class Module(object):
 # 	#end def buildCleanup(self):
 
 # # end class ModuleBase(Object):
- 

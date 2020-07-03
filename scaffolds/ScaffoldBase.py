@@ -1,12 +1,12 @@
 import pymel.core as pm
 
 from .. import utils
-from ..userPrefs import user
+from .. import user
 
 # ----------------------------------------------------------------------------------------------------------------------
-'''
+"""
 
-	Scaffold.PY
+	SCAFFOLDBASE.PY
 	Base class for creating scaffold chains (Template joints for auto rigger to 
 	build from).  Inherit from this class and override any functions required to 
 	create new rig scaffolding.
@@ -22,7 +22,7 @@ from ..userPrefs import user
 				default it will tag the root joint with the module type and the
 				option to include end joint.
 
-'''
+"""
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -57,7 +57,11 @@ class Scaffold(object):
 				raise TypeError('--"{}" is not a module root.'.format(module_root))
 
 			self.chain = utils.getModuleChildren(module_root)
-			self.moduleType = module_root.getAttr('RB_module_type', asString=True)
+
+			self._moduleType = module_root.getAttr('RB_module_type', asString=True)
+			if self._moduleType not in self._availableModules:
+				raise ScaffoldException('Module type: {} is not in list of available modules.'.format(self._moduleType))
+
 			self.name = self.getModName(module_root)
 			self._length = set()
 			self.socket = module_root.listRelatives(parent=True)[0]
@@ -76,7 +80,9 @@ class Scaffold(object):
 			self.socket = self.returnValidParent(kwargs.pop('socket', 'root'))
 			pm.matchTransform(self.root, self.socket)
 			
-			self.moduleType = kwargs.pop('moduleType', ' ')
+			self._moduleType = kwargs.pop('moduleType', ' ')
+			if self._moduleType not in self._availableModules:
+				raise ScaffoldException('Module type: {} is not in list of available modules.'.format(self._moduleType))
 
 			self.display()
 			
@@ -110,10 +116,9 @@ class Scaffold(object):
 		pm.parent(shape, self.root, r=True, s=True)
 
 		pm.delete(curv)
-		utils.setOverrideColour(user.prefs('default-jnt-colour'), [self.chain,
-																		shape])
-		utils.setOverrideColour(user.prefs('module-root-colour'), self.root)
-		utils.setOutlinerColour(user.prefs('module-root-colour'), self.root)
+		utils.setOverrideColour(user.prefs['default-jnt-colour'], [self.chain,shape])
+		utils.setOverrideColour(user.prefs['module-root-colour'], self.root)
+		utils.setOutlinerColour(user.prefs['module-root-colour'], self.root)
 	# end def display(self):
 
 	# ------------------------------------------------------------------------------------------------------------------
@@ -131,7 +136,7 @@ class Scaffold(object):
 	# end def tag(self):
 
 	# ------------------------------------------------------------------------------------------------------------------
-	# . 												properties
+	# . 											properties
 	# ------------------------------------------------------------------------------------------------------------------
 
 	@property
@@ -165,11 +170,9 @@ class Scaffold(object):
 
 	@moduleType.setter
 	def moduleType(self, new_module):
-		if new_module in self._availableModules:
-			if self.root.hasAttr('RB_module_type'):
-				self.root.RB_module_type.set(new_module)
-		else:
-			raise ScaffoldException('Module type: {} is not in list of available modules.'.format(new_module))
+		if self.root.hasAttr('RB_module_type'):
+			self.root.RB_module_type.set(new_module)
+
 		self._moduleType = new_module
 	# end def moduleType(self, new_module):
 
@@ -190,7 +193,7 @@ class Scaffold(object):
 	# end def length(self):
 
 	# ------------------------------------------------------------------------------------------------------------------
-	# .												static functions
+	# .											static utility functions
 	# ------------------------------------------------------------------------------------------------------------------
 	@staticmethod
 	def returnValidParent(node):
@@ -218,8 +221,8 @@ class Scaffold(object):
 	def makeNameUnique(name):
 		"""
 		Makes name unique in scene
-		:param name: (string) name to pad
-		:return: padded name
+		:param name: (string) name to pad with numeral
+		:return: string padded name
 		"""
 
 		new_name = name
@@ -234,19 +237,18 @@ class Scaffold(object):
 	@staticmethod
 	def getModName(node_name):
 		"""
-		Make a nice name for a module
+		Get module nice name from a node name
 		:param node_name: (PyNode) node name to make nice name
-		:return: nice name
+		:return: string stripped node nice name
 		"""
 
 		split_ls = node_name.split('_')
 		mod_name = split_ls[0]
 
 		# checks for L R prefixes
-		if any(prefix for prefix in [user.prefs('left-prefix'),
-			user.prefs('right-prefix')] if prefix == split_ls[0]):
-				mod_name = ('_').join(split_ls[0:2])
+		if any(prefix for prefix in [user.prefs['left-prefix'], user.prefs['right-prefix']] if prefix == split_ls[0]):
+			mod_name = '_'.join(split_ls[0:2])
 
 		return mod_name
-	#end def getModName(node_name):
+	# end def getModName(node_name):
 # end class Scaffold(object):
