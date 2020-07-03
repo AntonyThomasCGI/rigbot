@@ -1,0 +1,15 @@
+#notes.txt
+
+- ctrl nulls are all grey outliner colour so are invisible except the visibility nulls which could have override controls
+for the visibility of ctrls under them
+
+- have attrs on BIND save out to settings loc or something as dict in string
+
+	-builder could have selected and PyNode-like classes to transfrom selected module roots into class objects
+
+- could consider moving tag() and display() functions out of ScaffoldBase
+
+git commands:
+    > git add . (or add filename)
+    > git commit -m "message"
+    > git push
