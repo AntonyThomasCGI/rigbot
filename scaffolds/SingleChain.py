@@ -14,16 +14,16 @@ from ..userPrefs import user
 ## --------------------------------------------------------------------------------
 
 
-class SingleChain( Scaffold ):
+class SingleChain(Scaffold):
 
 	_availableModules = [ ' ', 'SimpleFk' ]
 
-	def __init__( self, **kwargs ):
-		super( SingleChain, self ).__init__( **kwargs )
+	def __init__(self, **kwargs):
+		super(SingleChain, self).__init__(**kwargs)
 
-	def makeBind( self ):
+	def makeBind(self):
 
-		self.chain = utils.makeJointChain( self.length, self.name, user.prefs( 
-													'bind-skeleton-suffix' ) )
-	# end def makeBind( self ):
-# end class SingleChain( Scaffold ):
+		self.chain = utils.makeJointChain(self.length, self.name, user.prefs(
+													'bind-skeleton-suffix'))
+	# end def makeBind(self):
+# end class SingleChain(Scaffold):

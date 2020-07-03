@@ -12,42 +12,42 @@ from .. import utils
 
 ## --------------------------------------------------------------------------------
 
-class ModuleException( Exception ):
+class ModuleException(Exception):
 	pass
 
-class Module( object ):
+class Module(object):
 
 	"""
 	Inherrit from this class ..blah blah
 
 	"""
 
-	def __init__( ):
+	def __init__():
 	pass
-	# end def __init__( self ):
+	# end def __init__(self):
 
 
-# 	def __str__( self ):
-# 		return 'rb.{}({})'.format( self.__class__.__name__, self.name )
-# 	# end def __str__( self ):
+# 	def __str__(self):
+# 		return 'rb.{}({})'.format(self.__class__.__name__, self.name)
+# 	# end def __str__(self):
 
 
-# 	def __repr__( self ):
+# 	def __repr__(self):
 # 		return self.__str__()
-# 	# end def __repr__( self ):
+# 	# end def __repr__(self):
 
 
 # 	##-----------------------------------------------------------------------------
-# 	def build( self ):
+# 	def build(self):
 # 		raise ModuleBaseException('Invalid subclass-- build() function not '
 # 			+'implemented.')
 
 
 # 	##-----------------------------------------------------------------------------
-# 	def buildCleanup( self ):
+# 	def buildCleanup(self):
 # 		## eg; transfers custom attrs from module root jnt
 # 		pass
-# 	#end def buildCleanup( self ):
+# 	#end def buildCleanup(self):
 
-# # end class ModuleBase( Object ):
+# # end class ModuleBase(Object):
  

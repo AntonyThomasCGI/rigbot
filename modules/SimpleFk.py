@@ -14,14 +14,14 @@ from ..userPrefs import user
 ## --------------------------------------------------------------------------------
 
 
-class SingleChain( RBModule ):
+class SingleChain(RBModule):
 
-	def __init__( self, length, **kwargs ):
-		super( SingleChain, self ).__init__( length, **kwargs )
+	def __init__(self, length, **kwargs):
+		super(SingleChain, self).__init__(length, **kwargs)
 
-	def makeBind( self ):
+	def makeBind(self):
 
-		self.chain = utils.makeJointChain( self.length, self.name, user.prefs( 
-													'bind-skeleton-suffix' ) )
-	# end def makeBind( self ):
-# end class SingleChain( RBModule ):
+		self.chain = utils.makeJointChain(self.length, self.name, user.prefs(
+													'bind-skeleton-suffix'))
+	# end def makeBind(self):
+# end class SingleChain(RBModule):

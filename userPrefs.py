@@ -1,4 +1,4 @@
-## --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 '''
 
    USERPREFS.PY
@@ -8,29 +8,28 @@
    the prefs you originally used.
 
 '''
-## --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class user:
 
-			# don't change			# change
 	_prefs = {
-			'root-joint'			:'root_BIND',
-			'bind-skeleton-suffix'	:'BIND',
-			'default-jnt-colour'	:'grey-blue',
-			'module-root-colour'	:'pale-orange',
+			'root-joint'			: 'root_BIND',
+			'bind-skeleton-suffix'	: 'BIND',
+			'default-jnt-colour'	: 'grey-blue',
+			'module-root-colour'	: 'pale-orange',
 
-			'root-ctrl-name'		:'GOD',
-			'root2-ctrl-name'		:'GOD_02',
-			'ctrl-suffix'			:'ctrl',
-			'num-offset-ctrls'		:1,
+			'root-ctrl-name'		: 'GOD',
+			'root2-ctrl-name'		: 'GOD_02',
+			'ctrl-suffix'			: 'ctrl',
+			'num-offset-ctrls'		: 1,
 
-			'left-prefix'			:'L',
-			'right-prefix'			:'R',
+			'left-prefix'			: 'L',
+			'right-prefix'			: 'R',
 		}
 
 	@staticmethod
-	def prefs( pref ):
+	def prefs(pref):
 		return user._prefs[pref]
-	# end def prefs( pref ):
+	# end def prefs(pref):
 # end class user:
