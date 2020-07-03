@@ -100,8 +100,7 @@ class Rig(object):
 
 		module_roots = filter(isModRoot, flattened_jnts)
 
-		modules_ls = map(lambda mod_root: scaf.Scaffold(moduleRoot=mod_root), 
-															module_roots)
+		modules_ls = map(lambda mod_root: scaf.Scaffold(moduleRoot=mod_root), module_roots)
 
 		self._modules = modules_ls
 	# end def getModules(self):

@@ -3,7 +3,7 @@ import pymel.core as pm
 from .. import utils
 from ..userPrefs import user
 
-## --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 '''
 
 	Scaffold.PY
@@ -23,7 +23,7 @@ from ..userPrefs import user
 				option to include end joint.
 
 '''
-## --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class ScaffoldException(Exception):
@@ -32,36 +32,35 @@ class ScaffoldException(Exception):
 
 class Scaffold(object):
 
-	## Specify what modules can build from this scaffold
-	## TODO: include all modules in Scaffold base class i guess..?
+	# Specify what modules can build from this scaffold
+	# TODO: include all modules in Scaffold base class i guess..?
 	_availableModules = utils.getFilteredDir('modules')
 	_availableModules.append(' ')
 	
-	
-	##-----------------------------------------------------------------------------
-	def __init__(self, moduleRoot=None, **kwargs):
-		'''
-		moduleRoot (PyNode):	If moduleRoot=None will build a new scaffold from 
+	# ------------------------------------------------------------------------------------------------------------------
+	def __init__(self, module_root=None, **kwargs):
+		"""
+		module_root (PyNode):	If module_root=None will build a new scaffold from 
 								builder args. Or pass valid module root to return
 								scaffold class of module.
 		
-		Builder kwargs: length (int) 	= joint chain length
-						module (string) = module type to tag module root with
-						name (string) 	= naming convention prefix
-						socket (pynode or string) = parent for module, default=root
-		'''
+		Builder kwargs: 	length (int) 	= joint chain length
+							module (string) = module type to tag module root with
+							name (string) 	= naming convention prefix
+							socket (PyNode or string) = parent for module, default=root
+		"""
 
-		## if moduleRoot: module already exists so populate class attributes
-		if moduleRoot:
+		# if module_root: module already exists so populate class attributes
+		if module_root:
 			
-			if not moduleRoot.hasAttr('RB_MODULE_ROOT'):
-				raise TypeError('--"{}" is not a module root.'.format(moduleRoot))
+			if not module_root.hasAttr('RB_MODULE_ROOT'):
+				raise TypeError('--"{}" is not a module root.'.format(module_root))
 
-			self.chain = utils.getModuleChildren(moduleRoot)
-			self.moduleType = moduleRoot.getAttr('RB_module_type', asString=True)
-			self.name = self.getModName(moduleRoot)
+			self.chain = utils.getModuleChildren(module_root)
+			self.moduleType = module_root.getAttr('RB_module_type', asString=True)
+			self.name = self.getModName(module_root)
 			self._length = set()
-			self.socket = moduleRoot.listRelatives(parent=True)[0]
+			self.socket = module_root.listRelatives(parent=True)[0]
 
 			for flag in kwargs:
 				print('// Warning: {} flag is ignored in non-build mode.'.format(flag))
@@ -83,10 +82,9 @@ class Scaffold(object):
 			
 			self.tag()
 
-			## For convenience select chain root
+			# For convenience select chain root
 			pm.select(self.root)
 	# end def __init__(self, parent='root'):
-
 
 	def __str__(self):
 		return 'rb.{}({})'.format(self.__class__.__name__, self.name)
@@ -96,17 +94,14 @@ class Scaffold(object):
 		return self.__str__()
 	# end def __repr__(self):
 
-
-	##-----------------------------------------------------------------------------
+	# ------------------------------------------------------------------------------------------------------------------
 	def makeBind(self):
-		raise ScaffoldException('--Invalid subclass: makeBind() function not '
-									+'implemented.')
+		raise ScaffoldException('--Invalid subclass: makeBind() function not implemented.')
 	# end def makeBind(self):
 
-
-	##-----------------------------------------------------------------------------
+	# ------------------------------------------------------------------------------------------------------------------
 	def display(self):
-		curv = pm.curve(d=1, p=utils.controllerShapes[ 'locator' ],
+		curv = pm.curve(d=1, p=utils.controllerShapes['locator'],
 						n=(self.name + '_display'))
 		utils.scaleCtrlShape(0.5, 3, curv)
 
@@ -121,8 +116,7 @@ class Scaffold(object):
 		utils.setOutlinerColour(user.prefs('module-root-colour'), self.root)
 	# end def display(self):
 
-
-	##-----------------------------------------------------------------------------
+	# ------------------------------------------------------------------------------------------------------------------
 	def tag(self):
 		default_tags = [
 			{ 'name':'RB_MODULE_ROOT', 'at':'enum', 'en':' ', 'k':0, 'l':1 },
@@ -136,10 +130,9 @@ class Scaffold(object):
 			utils.makeAttrFromDict(self.root, attr_dict)
 	# end def tag(self):
 
-
-	##-----------------------------------------------------------------------------
-	## properties
-	## ----------------------------------------------------------------------------
+	# ------------------------------------------------------------------------------------------------------------------
+	# . 												properties
+	# ------------------------------------------------------------------------------------------------------------------
 
 	@property
 	def socket(self):
@@ -151,7 +144,6 @@ class Scaffold(object):
 		pm.parent(self.root, new_parent)
 		self._socket = new_parent
 	# end def socket(self, parent):
-
 
 	@property
 	def name(self):
@@ -166,7 +158,6 @@ class Scaffold(object):
 		self._name = new_name
 	# end def name(self, new_name):
 
-
 	@property
 	def moduleType(self):
 		return self._moduleType
@@ -178,20 +169,17 @@ class Scaffold(object):
 			if self.root.hasAttr('RB_module_type'):
 				self.root.RB_module_type.set(new_module)
 		else:
-			raise ScaffoldException('Module type: {} '.format(new_module)
-										+'is not in list of available modules.')
+			raise ScaffoldException('Module type: {} is not in list of available modules.'.format(new_module))
 		self._moduleType = new_module
 	# end def moduleType(self, new_module):
 
-	
 	@property
 	def root(self):
 		if self.chain:
-			return(self.chain[0])
+			return self.chain[0]
 		else:
-			return(None)
+			return None
 	# end def root(self):
-
 
 	@property
 	def length(self):
@@ -200,21 +188,22 @@ class Scaffold(object):
 		else:
 			return self._length
 	# end def length(self):
-	
 
-
-	##-----------------------------------------------------------------------------
-	## utility functions
-	## ----------------------------------------------------------------------------
-	
-	def returnValidParent(self, node):
-		## node (string or pyNode) = 	Test if this node is a valid parent, if not
-		## 								attempt to return root.
+	# ------------------------------------------------------------------------------------------------------------------
+	# .												static functions
+	# ------------------------------------------------------------------------------------------------------------------
+	@staticmethod
+	def returnValidParent(node):
+		"""
+		Get valid socket to parent module to
+		:param node: (string or pyNode) Test if this node is a valid parent
+		:return: node if node is a valid parent else return root joint
+		"""
 
 		try:
 			if isinstance(node, basestring):
 				node = pm.PyNode(node)
-		except:
+		except pm.MayaObjectError:
 			root_node = utils.makeRoot()
 			return root_node
 
@@ -225,26 +214,35 @@ class Scaffold(object):
 			return root_node
 	# end def returnValidParent(self, node):
 
+	@staticmethod
+	def makeNameUnique(name):
+		"""
+		Makes name unique in scene
+		:param name: (string) name to pad
+		:return: padded name
+		"""
 
-	##-----------------------------------------------------------------------------
-	def makeNameUnique(self, name):
-		## name (string) = name to pad
 		new_name = name
-		i=1
+		i = 1
 		while pm.objExists(new_name+'_*'):
-		    new_name = '{}{}'.format(name, i)
-		    i+=1
-		    
-		return new_name
-	# end def makeNameUnique(self, name):
+			new_name = '{}{}'.format(name, i)
+			i += 1
 
-	def getModName(self, node_name):
-		## node_name (PyNode) = node name to make into module nice name
+		return new_name
+	# end def makeNameUnique(name):
+
+	@staticmethod
+	def getModName(node_name):
+		"""
+		Make a nice name for a module
+		:param node_name: (PyNode) node name to make nice name
+		:return: nice name
+		"""
 
 		split_ls = node_name.split('_')
 		mod_name = split_ls[0]
 
-		## checks for L R prefixes
+		# checks for L R prefixes
 		if any(prefix for prefix in [user.prefs('left-prefix'),
 			user.prefs('right-prefix')] if prefix == split_ls[0]):
 				mod_name = ('_').join(split_ls[0:2])
