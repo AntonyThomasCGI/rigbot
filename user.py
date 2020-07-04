@@ -10,6 +10,10 @@
 """
 # ----------------------------------------------------------------------------------------------------------------------
 
+# config
+debug = True
+
+# preferences
 prefs = {
 	'root-joint'			: 'root_BIND',
 	'bind-skeleton-suffix'	: 'BIND',

@@ -1,7 +1,5 @@
-import pymel.core as pm
-
 from .ScaffoldBase import Scaffold
-from .. import utils
+from ..rig import utils
 from .. import user
 
 # ----------------------------------------------------------------------------------------------------------------------

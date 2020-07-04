@@ -1,8 +1,4 @@
-import pymel.core as pm
-
-from .. import utils
-
-# --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 """
 
 	MODULEBASE.PY
@@ -10,10 +6,11 @@ from .. import utils
 
 """
 
-# --------------------------------------------------------------------------------
 
-class ModuleException(Exception):
+# ----------------------------------------------------------------------------------------------------------------------
+class ModuleBaseException(Exception):
 	pass
+
 
 class ModuleBase(object):
 
@@ -22,8 +19,17 @@ class ModuleBase(object):
 
 	"""
 
-	def __init__(self):
-		pass
+	def __init__(self, scaffold_obj):
+
+		# get attributes from scaffold object
+		self.chain = scaffold_obj.chain
+		self.name = scaffold_obj.name
+		self.socket = scaffold_obj.socket
+
+		# rig attributes
+		self.controllers = None
+
+		self.build()
 	# end def __init__(self):
 
 
@@ -37,10 +43,11 @@ class ModuleBase(object):
 # 	# end def __repr__(self):
 
 
-# 	##-----------------------------------------------------------------------------
-# 	def build(self):
-# 		raise ModuleBaseException('Invalid subclass-- build() function not '
-# 			+'implemented.')
+	def preBuild(self):
+		pass
+	# ------------------------------------------------------------------------------------------------------------------
+	def build(self):
+		raise ModuleBaseException('Invalid subclass-- build() function not implemented.')
 
 
 # 	##-----------------------------------------------------------------------------

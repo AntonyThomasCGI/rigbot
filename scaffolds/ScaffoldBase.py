@@ -1,6 +1,6 @@
 import pymel.core as pm
 
-from .. import utils
+from ..rig import utils
 from .. import user
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ class Scaffold(object):
 			if self._moduleType not in self._availableModules:
 				raise ScaffoldException('Module type: {} is not in list of available modules.'.format(self._moduleType))
 
-			self.name = self.getModName(module_root)
+			self._name = self.getModName(module_root)
 			self._length = set()
 			self.socket = module_root.listRelatives(parent=True)[0]
 
@@ -73,7 +73,7 @@ class Scaffold(object):
 
 			self.chain = None
 			self._length = kwargs.pop('length', 1)
-			self.name = self.makeNameUnique(kwargs.pop('name', 'joint'))
+			self._name = self.makeNameUnique(kwargs.pop('name', 'joint'))
 
 			self.makeBind()
 			
@@ -116,7 +116,7 @@ class Scaffold(object):
 		pm.parent(shape, self.root, r=True, s=True)
 
 		pm.delete(curv)
-		utils.setOverrideColour(user.prefs['default-jnt-colour'], [self.chain,shape])
+		utils.setOverrideColour(user.prefs['default-jnt-colour'], [self.chain, shape])
 		utils.setOverrideColour(user.prefs['module-root-colour'], self.root)
 		utils.setOutlinerColour(user.prefs['module-root-colour'], self.root)
 	# end def display(self):
@@ -124,11 +124,11 @@ class Scaffold(object):
 	# ------------------------------------------------------------------------------------------------------------------
 	def tag(self):
 		default_tags = [
-			{ 'name':'RB_MODULE_ROOT', 'at':'enum', 'en':' ', 'k':0, 'l':1 },
-			{ 'name':'RB_module_type', 'k':0, 'at':'enum', 
-				'en':(':'.join(self._availableModules)),
-				'dv':(self._availableModules.index(self.moduleType)) },
-			{ 'name':'RB_include_end_joint', 'k':0, 'at':'bool', 'dv':1 },
+			{'name': 'RB_MODULE_ROOT', 'at': 'enum', 'en': ' ', 'k': 0, 'l': 1},
+			{'name': 'RB_module_type', 'k': 0, 'at': 'enum',
+				'en': (':'.join(self._availableModules)),
+				'dv': (self._availableModules.index(self.moduleType))},
+			{'name': 'RB_include_end_joint', 'k': 0, 'at': 'bool', 'dv': 1},
 		]
 		
 		for attr_dict in default_tags:
@@ -159,7 +159,7 @@ class Scaffold(object):
 	def name(self, new_name):
 		if self.chain:
 			for jnt in self.chain:
-				pm.rename(jnt, jnt.replace(self.getModName(jnt), new_name))
+				pm.rename(jnt, jnt.replace(self._name, new_name))
 		self._name = new_name
 	# end def name(self, new_name):
 
