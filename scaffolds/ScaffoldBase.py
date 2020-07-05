@@ -1,7 +1,8 @@
 import pymel.core as pm
 
-from ..rig import utils
+from ..rig import controls, utils
 from .. import user
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 """
@@ -73,7 +74,7 @@ class Scaffold(object):
 
 			self.chain = None
 			self._length = kwargs.pop('length', 1)
-			self._name = self.makeNameUnique(kwargs.pop('name', 'joint'))
+			self._name = utils.makeNameUnique(kwargs.pop('name', 'joint'))
 
 			self.makeBind()
 			
@@ -90,26 +91,25 @@ class Scaffold(object):
 
 			# For convenience select chain root
 			pm.select(self.root)
-	# end def __init__(self, parent='root'):
+	# end def __init__():
 
 	def __str__(self):
 		return 'rb.{}({})'.format(self.__class__.__name__, self.name)
-	# end def __str__(self):
+	# end def __str__():
 
 	def __repr__(self):
 		return self.__str__()
-	# end def __repr__(self):
+	# end def __repr__():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def makeBind(self):
 		raise ScaffoldException('--Invalid subclass: makeBind() function not implemented.')
-	# end def makeBind(self):
+	# end def makeBind():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def display(self):
-		curv = pm.curve(d=1, p=utils.controllerShapes['locator'],
-						n=(self.name + '_display'))
-		utils.scaleCtrlShape(0.5, 3, curv)
+		curv = pm.curve(d=1, p=controls.controllerShapes['locator'], n=(self.name + '_display'))
+		utils.scaleCtrlShape(curv, scale_mult=0.5, line_width=3)
 
 		shape = curv.getChildren()[0]
 		utils.setOverrideColour('grey-blue', shape)
@@ -119,7 +119,7 @@ class Scaffold(object):
 		utils.setOverrideColour(user.prefs['default-jnt-colour'], [self.chain, shape])
 		utils.setOverrideColour(user.prefs['module-root-colour'], self.root)
 		utils.setOutlinerColour(user.prefs['module-root-colour'], self.root)
-	# end def display(self):
+	# end def display():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def tag(self):
@@ -133,7 +133,7 @@ class Scaffold(object):
 		
 		for attr_dict in default_tags:
 			utils.makeAttrFromDict(self.root, attr_dict)
-	# end def tag(self):
+	# end def tag():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	# . 											properties
@@ -142,18 +142,18 @@ class Scaffold(object):
 	@property
 	def socket(self):
 		return self._socket
-	# end def socket(self):
+	# end def socket():
 
 	@socket.setter
 	def socket(self, new_parent):
 		pm.parent(self.root, new_parent)
 		self._socket = new_parent
-	# end def socket(self, parent):
+	# end def socket():
 
 	@property
 	def name(self):
 		return self._name
-	# end def name(self):
+	# end def name():
 	
 	@name.setter
 	def name(self, new_name):
@@ -161,12 +161,12 @@ class Scaffold(object):
 			for jnt in self.chain:
 				pm.rename(jnt, jnt.replace(self._name, new_name))
 		self._name = new_name
-	# end def name(self, new_name):
+	# end def name():
 
 	@property
 	def moduleType(self):
 		return self._moduleType
-	# end def module(self):
+	# end def module():
 
 	@moduleType.setter
 	def moduleType(self, new_module):
@@ -174,7 +174,7 @@ class Scaffold(object):
 			self.root.RB_module_type.set(new_module)
 
 		self._moduleType = new_module
-	# end def moduleType(self, new_module):
+	# end def moduleType():
 
 	@property
 	def root(self):
@@ -182,7 +182,7 @@ class Scaffold(object):
 			return self.chain[0]
 		else:
 			return None
-	# end def root(self):
+	# end def root():
 
 	@property
 	def length(self):
@@ -190,7 +190,7 @@ class Scaffold(object):
 			return len(self.chain)
 		else:
 			return self._length
-	# end def length(self):
+	# end def length():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	# .											static utility functions
@@ -215,24 +215,7 @@ class Scaffold(object):
 		else:
 			root_node = utils.makeRoot()
 			return root_node
-	# end def returnValidParent(self, node):
-
-	@staticmethod
-	def makeNameUnique(name):
-		"""
-		Makes name unique in scene
-		:param name: (string) name to pad with numeral
-		:return: string padded name
-		"""
-
-		new_name = name
-		i = 1
-		while pm.objExists(new_name+'_*'):
-			new_name = '{}{}'.format(name, i)
-			i += 1
-
-		return new_name
-	# end def makeNameUnique(name):
+	# end def returnValidParent():
 
 	@staticmethod
 	def getModName(node_name):
@@ -250,5 +233,5 @@ class Scaffold(object):
 			mod_name = '_'.join(split_ls[0:2])
 
 		return mod_name
-	# end def getModName(node_name):
-# end class Scaffold(object):
+	# end def getModName():
+# end class Scaffold():

@@ -5,6 +5,8 @@ import copy
 
 from .. import user
 
+from . import controls
+
 # ----------------------------------------------------------------------------------------------------------------------
 """
 
@@ -25,11 +27,14 @@ class Colours:
 		"yellow":		[1.0, 	1.0, 	0.0],
 		"green":		[0.0, 	1.0, 	0.0],
 		"blue":			[0.0, 	0.0, 	1.0],
+		"dark-blue":	[0.0,	0.117,	0.117],  # default
 		"red":			[1.0, 	0.0, 	0.0],
 		"orange":		[1.0, 	0.17, 	0.0],
 		"pale-orange":	[1.0, 	0.25, 	0.1],
 		"grey-blue":	[0.03,	0.03,	0.06],
 		"grey":			[0.038, 0.038, 	0.038],
+		"white":		[1.0,	1.0,	1.0],
+		"purple":		[0.25,	0.0,	0.80],
 	}
 
 	@staticmethod
@@ -43,7 +48,8 @@ class Colours:
 		for item in Colours._colourRGB:
 			if item == colour:
 				return Colours._colourRGB[item]
-	# end def get_rgb_value(colour):
+		raise ValueError('%s is not an available colour!' % colour)
+	# end def get_rgb_value():
 
 	@staticmethod
 	def get_linear_value(colour):
@@ -63,41 +69,15 @@ class Colours:
 			else:
 				rgb_colour[ index ] = shifted_value
 		return rgb_colour
-	# end def get_linear_value(colour):
+	# end def get_linear_value():
+
+	@staticmethod
+	def list():
+		print('Available colours are:')
+		for key in Colours._colourRGB:
+			print key
+	# end def list():
 # end class Colours:
-
-
-controllerShapes = {
-	'locator':	[
-		[0.0, 0.0, 7.0], [0.0, 0.0, -7.0], 
-		[0.0, 0.0, 0.0], [7.0, 0.0, 0.0], 
-		[-7.0, 0.0, 0.0], [0.0, 0.0, 0.0], 
-		[0.0, 7.0, 0.0], [0.0, -7.0, 0.0]
-	],
-	'box': [
-		[0, -0.5, 0.5], [0, -0.5, -0.5], [0, 0.5, -0.5], [0, 0.5, 0.5], 
-		[0, -0.5, 0.5]
-	],
-	'circle': [
-		[1.874699728327322e-33, 0.5, -3.061616997868383e-17],
-		[-1.1716301013315743e-17, 0.46193976625564337, 0.19134171618254486],
-		[-2.1648901405887335e-17, 0.35355339059327373, 0.3535533905932738],
-		[-2.8285652807192507e-17, 0.19134171618254486, 0.46193976625564337],
-		[-3.061616997868383e-17, -2.4894981252573997e-17, 0.5],
-		[-2.8285652807192507e-17, -0.19134171618254492, 0.46193976625564337],
-		[-2.164890140588733e-17, -0.35355339059327384, 0.35355339059327373],
-		[-1.1716301013315742e-17, -0.4619397662556434, 0.19134171618254484],
-		[3.223916797098519e-33, -0.5, -5.265055686820291e-17],
-		[1.171630101331575e-17, -0.4619397662556433, -0.19134171618254495],
-		[2.1648901405887338e-17, -0.3535533905932737, -0.35355339059327384],
-		[2.828565280719251e-17, -0.19134171618254478, -0.4619397662556434],
-		[3.061616997868383e-17, 1.0816170809946073e-16, -0.5],
-		[2.8285652807192507e-17, 0.191341716182545, -0.4619397662556433],
-		[2.1648901405887323e-17, 0.35355339059327384, -0.3535533905932736],
-		[1.1716301013315736e-17, 0.46193976625564337, -0.19134171618254472],
-		[-1.0022072164332974e-32, 0.4999999999999999, 1.6367285933071856e-16]
-	],
-}
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -121,11 +101,10 @@ def makeJointChain(length, name, suffix='jnt', rad=1):
 	joint_list = []
 
 	for i in range(length):
-		joint_list.append(pm.joint(p=[ (10*i), 0, 0 ], n='{}_{:02d}_{}'.format(
-									name, (i+1), suffix), radius=rad))
+		joint_list.append(pm.joint(p=[(10*i), 0, 0 ], n='{}_{:02d}_{}'.format(name, (i+1), suffix), radius=rad))
 
 	return joint_list
-# end def makeJointChain(length, name, suffix, rad=1):
+# end def makeJointChain():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -143,10 +122,17 @@ def setOverrideColour(colour, *args):
 		colour = Colours.get_rgb_value(colour)
 
 	for item in item_ls:
-		item.overrideEnabled.set(1)
-		item.drawOverride.overrideRGBColors.set(1)
-		item.drawOverride.overrideColorRGB.set(*colour)
-# end def setOverrideColour(colour, *args):
+		try:
+			shapes = item.getShapes()
+			for shape in shapes:
+				shape.overrideEnabled.set(1)
+				shape.drawOverride.overrideRGBColors.set(1)
+				shape.drawOverride.overrideColorRGB.set(*colour)
+		except AttributeError:
+			item.overrideEnabled.set(1)
+			item.drawOverride.overrideRGBColors.set(1)
+			item.drawOverride.overrideColorRGB.set(*colour)
+# end def setOverrideColour():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -166,7 +152,7 @@ def setOutlinerColour(colour, *args):
 	for item in item_ls:
 		item.useOutlinerColor.set(1)
 		item.outlinerColor.set(*colour)
-# end def setOutlinerColour(colour, *args):
+# end def setOutlinerColour():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -178,7 +164,7 @@ def makePynodeList(*args, **kwargs):
 	:param kwargs: node 'type' filter
 	:return:
 	"""
-	
+
 	obType = kwargs.get('type', None)
 
 	def makeListRecursive(passed_args, actual_list=None):
@@ -202,7 +188,7 @@ def makePynodeList(*args, **kwargs):
 		objects = pm.ls(objects, type=obType)
 
 	return objects
-# end def makePynodeList(*args, **kwargs):
+# end def makePynodeList():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -214,43 +200,43 @@ def safeMakeChildGroups(path_ls, query=False):
 	:param query: can run in query mode to return if groups exist
 	:return: list of PyNodes
 	"""
-	
+
 	def permutatePath(node_path):
 		# node_path (string) = full dag path to be split into individual dag paths
 		split_ls = node_path.split('|')
 		path_ls = []
 		for i in range(len(split_ls)):
-			path_ls.append('|'.join(split_ls[ slice(i+1) ]))
-	
+			path_ls.append('|'.join(split_ls[slice(i+1)]))
+
 		return path_ls
-	# end permutatePath(node_path):
-	
+	# end permutatePath():
+
 	pynode_ls = []
 	node = None
-	
+
 	for path in path_ls:
 		dag_path_ls = permutatePath(path)
 
 		for dag_path in dag_path_ls:
-			
+
 			if pm.objExists(dag_path):
 				node = pm.PyNode(dag_path)
-			
+
 			elif query:
 				return node
-			
+
 			else:
 				split_dag = dag_path.split('|')
 				node = pm.group(n=split_dag[-1], em=True)
 				if len(split_dag) >= 2:
 					pm.parent(node, split_dag[-2])
 		pynode_ls.append(node)
-	
+
 	if query:
 		return True
 	else:
 		return pynode_ls
-# end def safeMakeChildGroups(path_ls):
+# end def safeMakeChildGroups():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -300,18 +286,20 @@ def makeAttrFromDict(ob, attr_data):
 	else:
 		if not attr_data[ 'k' ]:
 			ob.setAttr(attr_name, cb=channel_box)
-# end def makeAttrFromDict(ob, attr_data):
+# end def makeAttrFromDict():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def scaleCtrlShape(scale_mult, line_width, *args):
+def scaleCtrlShape(*args, **kwargs):
 	"""
 	Scale ctrl shapes and set line width
 
-	:param scale_mult: (float, int) how much to scale ctrl
-	:param line_width: (float, int) set ctrl line width
 	:param args: list of transform nodes to change
+	:param kwargs:  scale_mult: amount to scale ctrl curve, default 1
+					line_width: line width thickness, ignores if not specified
 	"""
+	scale_mult = kwargs.pop('scale_mult', 1)
+	line_width = kwargs.pop('line_width', None)
 
 	ctrl_ls = makePynodeList(args)
 
@@ -326,15 +314,15 @@ def scaleCtrlShape(scale_mult, line_width, *args):
 				# else curve must be closed so get spans
 				else:
 					num_cv = pm.getAttr('%s.spans' % shape)
-				print num_cv
 				for i in range(num_cv):
 					cv_ws = pm.xform('{}.cv[{}]'.format(shape, i), t=True, q=True)
 					pm.xform(
 						'{}.cv[{}]'.format(shape, i),
 						t=[(cv_ws[0] * scale_mult), (cv_ws[1] * scale_mult), (cv_ws[2] * scale_mult)]
 					)
-				shape.lineWidth.set(line_width)
-# end def scaleCtrlShape(scale_mult, line_width, *args):
+				if line_width:
+					shape.lineWidth.set(line_width)
+# end def scaleCtrlShape():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -346,11 +334,11 @@ def lockHide(attr_data, *args):
 						also accepts 'all' to lock/hide all default channels
 	:param args:		list of nodes to lockHide
 	"""
-	
+
 	objs = makePynodeList(args)
-	
+
 	to_lock = []
-	
+
 	for item, axis in attr_data.items():
 		if any([ s == item for s in ['t', 'r', 's', 'translate', 'rotate', 'scale'] ]):
 			# as well as 'xyz' axis can be 1 or 0 so:
@@ -370,11 +358,19 @@ def lockHide(attr_data, *args):
 		else:
 			if axis:
 				to_lock.append(item)
-				
+
 	for ob in objs:
 		for attr in to_lock:
 			pm.setAttr('{}.{}'.format(ob, attr), lock=True, keyable=False, channelBox=False)
-# end def lockHide(attr_data, *args):
+# end def lockHide():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+def parentByList(list):
+	list = makePynodeList(list)
+	for i in range(len(list)-1):
+		pm.parent(list[i], list[i+1])
+# end def parentByList():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -390,16 +386,16 @@ def getFilteredDir(folder):
 	"""
 
 	main_dir = os.path.dirname(os.path.dirname(os.path.abspath(os.path.realpath(__file__))))
-	
+
 	files = [
 		x.split('.')[0] for x in os.listdir(main_dir+'\\{}'.format(folder))
 		if x.endswith('.py')
 		and not x.count('__init__')
 		and not x.endswith('Base.py')
 	]
-					
+
 	return files
-# end def getFilteredDir(folder):
+# end def getFilteredDir():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -415,8 +411,8 @@ def makeRoot():
 		pm.select(deselect=True)
 		root_jnt = pm.joint(n=user.prefs['root-joint'], radius=0.001)
 
-		ctrl = pm.curve(d=1, p=controllerShapes['locator'], n=(user.prefs['root-joint'] + '_display'))
-		scaleCtrlShape(1.43, 3, ctrl)
+		ctrl = pm.curve(d=1, p=controls.controllerShapes['locator'], n=(user.prefs['root-joint'] + '_display'))
+		scaleCtrlShape(ctrl, scale_mult=1.43, line_width=3)
 
 		ctrl_shape = ctrl.getChildren()[0]
 		setOverrideColour(user.prefs['module-root-colour'], [root_jnt, ctrl_shape])
@@ -454,13 +450,13 @@ def getModuleChildren(modroot):
 
 	def isModRoot(jnt):
 		return jnt.hasAttr('RB_MODULE_ROOT')
-	# end def isModRoot(jnt):
+	# end def isModRoot():
 
 	module_roots = filter(isModRoot, flattened_jnts)
 	short_mod_roots = map(lambda mod_r: mod_r.shortName(), module_roots)
 
 	modname = modroot.shortName()
-	
+
 	def filterChildren(jnt):
 
 		path_dict = { k:v for k,v in enumerate(jnt.fullPath().split('|')) }
@@ -481,13 +477,32 @@ def getModuleChildren(modroot):
 			return True
 		else:
 			return False
-	# end def filterChildren(jnt):
+	# end def filterChildren():
 
 	mod_children = modroot.getChildren(ad=True, type='joint')
-	
+
 	children = filter(filterChildren, mod_children)
 	children.append(modroot)
 	children.reverse()
 
 	return children
-# end def getModuleChildren(modroot):
+# end def getModuleChildren():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+def makeNameUnique(name, suffix='_*'):
+	"""
+	Makes name unique in scene
+	:param name: (string) name to pad with numeral
+	:param suffix: (string) search suffix eg; _ctrl, _jnt, _*
+	:return: string padded name
+	"""
+
+	new_name = name
+	i = 1
+	while pm.objExists(new_name+'%s' % suffix):
+		new_name = '{}{}'.format(name, i)
+		i += 1
+
+	return new_name
+# end makeNameUnique():

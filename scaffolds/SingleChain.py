@@ -1,4 +1,5 @@
 from .ScaffoldBase import Scaffold
+
 from ..rig import utils
 from .. import user
 
@@ -22,5 +23,5 @@ class SingleChain(Scaffold):
 	def makeBind(self):
 
 		self.chain = utils.makeJointChain(self.length, self.name, user.prefs['bind-skeleton-suffix'])
-	# end def makeBind(self):
-# end class SingleChain(Scaffold):
+	# end def makeBind():
+# end class SingleChain():

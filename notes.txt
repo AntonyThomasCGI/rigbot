@@ -14,3 +14,24 @@ layout bit of a mess:
     > selected() doesnt make much sense in builder... maybe utils should somehow import into the rb namespace ?? then
       add selected() to that
 ^>actually would be nice if everything imported from one import :thinking:
+
+> turned off statement has no effect inspection so >> // works but might want to check later
+
+
+
+
+
+
+
+
+
+
+
+inspo
+footroll:
+    - https://www.youtube.com/watch?v=Ji77J7GeE94
+        move-able pivot,
+nhair setup:
+    - https://vimeo.com/433049725
+spine:
+    https://www.linkedin.com/pulse/creating-advanced-spine-rigging-system-maya-2020-kevin-borjon-piron/?fbclid=IwAR3eSis3y_LkxAebWUlrqH3RrjoJTa607dmCmT1G1yTHO_SeltHGwmi2MUg

@@ -1,3 +1,8 @@
+import pymel.core as pm
+
+from ..rig import utils
+from .. import user
+
 # ----------------------------------------------------------------------------------------------------------------------
 """
 
@@ -18,6 +23,7 @@ class ModuleBase(object):
 	Inherit from this class ..blah blah
 
 	"""
+	# TODO: add extra prefs dict for modules? eg; ctrl shapes, ctrl colours ? anything 'hard coded'
 
 	def __init__(self, scaffold_obj):
 
@@ -29,18 +35,21 @@ class ModuleBase(object):
 		# rig attributes
 		self.controllers = None
 
-		self.build()
-	# end def __init__(self):
+		utils.safeMakeChildGroups(['%s|ctrl' % user.prefs['rig-group'], 'Rig|ctrls|etc.'])
+
+		# probably don't want to call build() in the init but from builder after class initialized
+		# self.build()
+	# end def __init__():
 
 
 # 	def __str__(self):
 # 		return 'rb.{}({})'.format(self.__class__.__name__, self.name)
-# 	# end def __str__(self):
+# 	# end def __str__():
 
 
 # 	def __repr__(self):
 # 		return self.__str__()
-# 	# end def __repr__(self):
+# 	# end def __repr__():
 
 
 	def preBuild(self):
@@ -54,6 +63,6 @@ class ModuleBase(object):
 # 	def buildCleanup(self):
 # 		## eg; transfers custom attrs from module root jnt
 # 		pass
-# 	#end def buildCleanup(self):
+# 	#end def buildCleanup():
 
-# # end class ModuleBase(Object):
+# # end class ModuleBase():
