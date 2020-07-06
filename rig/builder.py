@@ -56,6 +56,7 @@ def batchBuild(modules=None):
 	:param modules: modules to rig
 	:return: list of module classes?? ##TODO
 	"""
+	utils.initiateRig()
 
 	if not modules:
 		modules = getModules()
@@ -65,69 +66,6 @@ def batchBuild(modules=None):
 			mod_class = getattr(mod, module.moduleType)
 			mod_class(module)
 # end def batchBuild():
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-def initiateRig():
-	"""
-	Creates default rig hierarchy to socket rig modules into
-	:return: dict of groups and ctrls
-	"""
-	rig_dict = {}
-
-	def safeMakeNode(component, socket):
-
-		if component == user.prefs['root-ctrl-name']:
-			if pm.objExists(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix']):
-				return pm.PyNode(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
-
-			god_ctrl = pm.circle(n=(component + '_' + user.prefs['ctrl-suffix']), nry=1, nrz=0, ch=False)[0]
-
-			utils.setOverrideColour('grey', god_ctrl)
-			utils.scaleCtrlShape(god_ctrl, scale_mult=45, line_width=-1)
-			for axis in ['X', 'Z']:
-				pm.connectAttr('{}.scaleY'.format(god_ctrl), '{}.scale{}'.format(god_ctrl, axis))
-				pm.setAttr('{}.scale{}'.format(god_ctrl, axis), lock=True)
-
-			god2_ctrl = controls.control(
-				name=user.prefs['root2-ctrl-name'], shape='omni-circle', size=10.2, colour='pale-orange')
-			pm.parent(god2_ctrl.null, god_ctrl)
-
-			if socket != 'World':
-				pm.parent(god_ctrl, socket)
-
-			return god_ctrl
-		# component must be group at this point
-		else:
-			if pm.objExists(component):
-				return pm.PyNode(component)
-
-			grp = pm.group(n=component, em=True)
-			if socket != 'World':
-				pm.parent(grp, socket)
-			return grp
-	# end def safeMakeNode():
-
-	def walkTreeWithParent(tree, socket='World'):
-
-		socket = safeMakeNode(tree.component, socket)
-		rig_dict[tree.component] = socket
-
-		if not tree.children:
-			return
-
-		for child in tree.children:
-			walkTreeWithParent(child, socket)
-	# end def walkTreeWithParent():
-
-	walkTreeWithParent(user.RigTree)
-
-	# make connections
-	for item in rig_dict:
-		print item
-
-	return rig_dict
-# end def initiateRig():
 
 
 # ----------------------------------------------------------------------------------------------------------------------

@@ -3,6 +3,7 @@ import pymel.core as pm
 from ..rig import utils
 from .. import user
 
+
 # ----------------------------------------------------------------------------------------------------------------------
 """
 
@@ -32,10 +33,14 @@ class ModuleBase(object):
 		self.name = scaffold_obj.name
 		self.socket = scaffold_obj.socket
 
+		self.rigBase = self.jointsGrp = self.transformGrp = self.noTransformGrp = self.modulesGrp = None
+
+		self.getRigGlobals()
+
 		# rig attributes
 		self.controllers = None
 
-		utils.safeMakeChildGroups(['%s|ctrl' % user.prefs['rig-group'], 'Rig|ctrls|etc.'])
+		pm.parent(user.prefs['root-joint'], self.jointsGrp)
 
 		# probably don't want to call build() in the init but from builder after class initialized
 		# self.build()
@@ -51,18 +56,33 @@ class ModuleBase(object):
 # 		return self.__str__()
 # 	# end def __repr__():
 
-
 	def preBuild(self):
 		pass
+
 	# ------------------------------------------------------------------------------------------------------------------
 	def build(self):
 		raise ModuleBaseException('Invalid subclass-- build() function not implemented.')
 
-
-# 	##-----------------------------------------------------------------------------
+# 	# ------------------------------------------------------------------------------------------------------------------
 # 	def buildCleanup(self):
-# 		## eg; transfers custom attrs from module root jnt
+# 		# eg; transfers custom attrs from module root jnt
 # 		pass
 # 	#end def buildCleanup():
 
-# # end class ModuleBase():
+	# ------------------------------------------------------------------------------------------------------------------
+	def getRigGlobals(self):
+
+		def validateExists(item):
+			if pm.objExists(item):
+				return pm.PyNode(item)
+			else:
+				utils.initiateRig()
+				return pm.PyNode(item)
+
+		self.rigBase = validateExists(user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
+		self.jointsGrp = validateExists(user.prefs['joint-group-name'])
+		self.transformGrp = validateExists('transform')
+		self.noTransformGrp = validateExists('no_transform')
+		self.modulesGrp = validateExists('modules')
+	# end def getRigGlobals():
+# end class ModuleBase():
