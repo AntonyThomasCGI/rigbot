@@ -171,7 +171,10 @@ class Scaffold(object):
 	@moduleType.setter
 	def moduleType(self, new_module):
 		if self.root.hasAttr('RB_module_type'):
-			self.root.RB_module_type.set(new_module)
+			try:
+				self.root.RB_module_type.set(new_module)
+			except pm.MayaAttributeEnumError:
+				raise ScaffoldException("--This scaffold does not support module type: {}".format(new_module))
 
 		self._moduleType = new_module
 	# end def moduleType():

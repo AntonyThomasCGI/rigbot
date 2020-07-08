@@ -100,7 +100,7 @@ def makeJointChain(length, name, suffix='jnt', rad=1):
 
 	joint_list = []
 
-	for i in range(length):
+	for i in xrange(length):
 		joint_list.append(pm.joint(p=[(10*i), 0, 0 ], n='{}_{:02d}_{}'.format(name, (i+1), suffix), radius=rad))
 
 	return joint_list
@@ -205,7 +205,7 @@ def safeMakeChildGroups(path_ls, query=False):
 		# node_path (string) = full dag path to be split into individual dag paths
 		split_ls = node_path.split('|')
 		path_ls = []
-		for i in range(len(split_ls)):
+		for i in xrange(len(split_ls)):
 			path_ls.append('|'.join(split_ls[slice(i+1)]))
 
 		return path_ls
@@ -314,7 +314,7 @@ def scaleCtrlShape(*args, **kwargs):
 				# else curve must be closed so get spans
 				else:
 					num_cv = pm.getAttr('%s.spans' % shape)
-				for i in range(num_cv):
+				for i in xrange(num_cv):
 					cv_ws = pm.xform('{}.cv[{}]'.format(shape, i), t=True, q=True)
 					pm.xform(
 						'{}.cv[{}]'.format(shape, i),
@@ -346,7 +346,7 @@ def lockHide(attr_data, *args):
 				for channel in ['x', 'y', 'z']:
 					to_lock.append(item + channel)
 			else:
-				for i in range(len(axis)):
+				for i in xrange(len(axis)):
 					to_lock.append(item + axis[i])
 
 		# special case 'all'
@@ -368,7 +368,7 @@ def lockHide(attr_data, *args):
 # ----------------------------------------------------------------------------------------------------------------------
 def parentByList(list):
 	list = makePynodeList(list)
-	for i in range(len(list)-1):
+	for i in xrange(len(list)-1):
 		pm.parent(list[i], list[i+1])
 # end def parentByList():
 
@@ -512,27 +512,34 @@ def makeNameUnique(name, suffix='_*'):
 def initiateRig():
 	"""
 	Creates default rig hierarchy to socket rig modules into
-	:return: dict of groups and ctrls
+	:return: dict of global groups and ctrls
 	"""
+
 	rig_dict = {}
 
 	def safeMakeNode(component, socket):
 
 		if component == user.prefs['root-ctrl-name']:
 			if pm.objExists(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix']):
-				return pm.PyNode(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
+				god_ctrl = pm.PyNode(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
+				god2_ctrl = pm.PyNode(user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
+				rig_dict['root2-ctrl-name'] = god2_ctrl
 
-			god_ctrl = pm.circle(n=(component + '_' + user.prefs['ctrl-suffix']), nry=1, nrz=0, ch=False)[0]
+			else:
+				god_ctrl = pm.circle(n=(component + '_' + user.prefs['ctrl-suffix']), nry=1, nrz=0, ch=False)[0]
 
-			setOverrideColour('grey', god_ctrl)
-			scaleCtrlShape(god_ctrl, scale_mult=45, line_width=-1)
-			for axis in ['X', 'Z']:
-				pm.connectAttr('{}.scaleY'.format(god_ctrl), '{}.scale{}'.format(god_ctrl, axis))
-				pm.setAttr('{}.scale{}'.format(god_ctrl, axis), lock=True)
+				setOverrideColour('grey', god_ctrl)
+				scaleCtrlShape(god_ctrl, scale_mult=45, line_width=-1)
+				for axis in ['X', 'Z']:
+					pm.connectAttr('{}.scaleY'.format(god_ctrl), '{}.scale{}'.format(god_ctrl, axis))
+					pm.setAttr('{}.scale{}'.format(god_ctrl, axis), lock=True)
 
-			god2_ctrl = controls.control(
-				name=user.prefs['root2-ctrl-name'], shape='omni-circle', size=10.2, colour='pale-orange')
-			pm.parent(god2_ctrl.null, god_ctrl)
+				god2_ctrl = controls.control(
+					name=user.prefs['root2-ctrl-name'], shape='omni-circle', size=10.2, colour='pale-orange')
+				pm.parent(god2_ctrl.null, god_ctrl)
+				rig_dict['root2-ctrl-name'] = god2_ctrl.ctrl
+
+			rig_dict[component] = god_ctrl
 
 			if socket != 'World':
 				pm.parent(god_ctrl, socket)
@@ -541,9 +548,12 @@ def initiateRig():
 		# component must be group at this point
 		else:
 			if pm.objExists(component):
-				return pm.PyNode(component)
+				grp = pm.PyNode(component)
+			else:
+				grp = pm.group(n=component, em=True)
 
-			grp = pm.group(n=component, em=True)
+			rig_dict[component] = grp
+
 			if socket != 'World':
 				pm.parent(grp, socket)
 			return grp
@@ -552,7 +562,6 @@ def initiateRig():
 	def walkTreeWithParent(tree, socket='World'):
 
 		socket = safeMakeNode(tree.component, socket)
-		rig_dict[tree.component] = socket
 
 		if not tree.children:
 			return
@@ -563,9 +572,28 @@ def initiateRig():
 
 	walkTreeWithParent(user.RigTree)
 
+	root2_world_outputs = rig_dict['root2-ctrl-name'].worldMatrix[0].outputs()
+
+	if 'decomposeMatrix' not in map(lambda x: x.nodeType(), root2_world_outputs):
+		root2_dcmp = pm.createNode('decomposeMatrix')
+		rig_dict['root2-ctrl-name'].worldMatrix[0] >> root2_dcmp.inputMatrix
+	else:
+		for node in root2_world_outputs:
+			if node.nodeType() == 'decomposeMatrix':
+				root2_dcmp = node
+
 	# make connections
-	for item in rig_dict:
-		print item
+	for item, node in rig_dict.items():
+
+		# turn off inherit unless we have ctrl
+		if not node.endswith('ctrl'):
+			node.inheritsTransform.set(0)
+
+		# these groups should follow god ctrls
+		if item in ['transform', user.prefs['joint-group-name']]:
+			root2_dcmp.outputTranslate >> node.translate
+			root2_dcmp.outputRotate >> node.rotate
+			root2_dcmp.outputScale >> node.scale
 
 	return rig_dict
 # end def initiateRig():
