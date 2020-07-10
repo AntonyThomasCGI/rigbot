@@ -31,6 +31,8 @@ class ScaffoldException(Exception):
 	pass
 
 
+# potentially Scaffold should inherit a functor somewhere to deal with the module root already existing vs creating new
+# https://www.geeksforgeeks.org/functors-use-python/
 class Scaffold(object):
 
 	# Specify what modules can build from this scaffold

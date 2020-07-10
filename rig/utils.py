@@ -205,7 +205,7 @@ def safeMakeChildGroups(path_ls, query=False):
 		# node_path (string) = full dag path to be split into individual dag paths
 		split_ls = node_path.split('|')
 		path_ls = []
-		for i in xrange(len(split_ls)):
+		for i in range(len(split_ls)):
 			path_ls.append('|'.join(split_ls[slice(i+1)]))
 
 		return path_ls
@@ -346,7 +346,7 @@ def lockHide(attr_data, *args):
 				for channel in ['x', 'y', 'z']:
 					to_lock.append(item + channel)
 			else:
-				for i in xrange(len(axis)):
+				for i in range(len(axis)):
 					to_lock.append(item + axis[i])
 
 		# special case 'all'
@@ -368,7 +368,7 @@ def lockHide(attr_data, *args):
 # ----------------------------------------------------------------------------------------------------------------------
 def parentByList(list):
 	list = makePynodeList(list)
-	for i in xrange(len(list)-1):
+	for i in range(len(list)-1):
 		pm.parent(list[i], list[i+1])
 # end def parentByList():
 
