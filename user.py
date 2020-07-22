@@ -51,9 +51,6 @@ class RigNode(object):
 RigTree = RigNode(
 	prefs['root-ctrl-name'],
 		[
-		RigNode(prefs['joint-group-name']), RigNode('modules'), RigNode(prefs['rig-group-name'],
-			[
-			RigNode('transform'), RigNode('no_transform')
-			])
+		RigNode(prefs['joint-group-name']), RigNode('modules')
 		]
 	)

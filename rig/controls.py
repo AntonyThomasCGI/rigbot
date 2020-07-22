@@ -15,6 +15,7 @@ import utils
 
 
 # TODO: L / R auto colouring
+# TODO: override delete python method to clean all the offsets/null ??
 class control(object):
 	def __init__(
 				self, name='control', shape='circle', size=1, line_width=user.prefs['default-line-width'],

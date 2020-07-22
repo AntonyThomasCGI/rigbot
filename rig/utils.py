@@ -100,7 +100,7 @@ def makeJointChain(length, name, suffix='jnt', rad=1):
 
 	joint_list = []
 
-	for i in xrange(length):
+	for i in range(length):
 		joint_list.append(pm.joint(p=[(10*i), 0, 0 ], n='{}_{:02d}_{}'.format(name, (i+1), suffix), radius=rad))
 
 	return joint_list
@@ -112,8 +112,8 @@ def setOverrideColour(colour, *args):
 	"""
 	Set DAG node override colour
 
-	:param colour: colour to set override colour
-	:param args: nodes to apply change
+	:param colour: `str or RGB` colour to set override colour
+	:param args: `node or string` nodes to apply change
 	"""
 
 	item_ls = makePynodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
@@ -124,14 +124,22 @@ def setOverrideColour(colour, *args):
 	for item in item_ls:
 		try:
 			shapes = item.getShapes()
-			for shape in shapes:
-				shape.overrideEnabled.set(1)
-				shape.drawOverride.overrideRGBColors.set(1)
-				shape.drawOverride.overrideColorRGB.set(*colour)
+
+			# check to see if getShapes returned empty list
+			if shapes:
+				print(shapes)
+				for shape in shapes:
+					shape.overrideEnabled.set(1)
+					shape.drawOverride.overrideRGBColors.set(1)
+					shape.drawOverride.overrideColorRGB.set(*colour)
+
 		except AttributeError:
-			item.overrideEnabled.set(1)
-			item.drawOverride.overrideRGBColors.set(1)
-			item.drawOverride.overrideColorRGB.set(*colour)
+			pass
+
+		# currently just blanket colour every transform and shape
+		item.overrideEnabled.set(1)
+		item.drawOverride.overrideRGBColors.set(1)
+		item.drawOverride.overrideColorRGB.set(*colour)
 # end def setOverrideColour():
 
 
@@ -523,7 +531,6 @@ def initiateRig():
 			if pm.objExists(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix']):
 				god_ctrl = pm.PyNode(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
 				god2_ctrl = pm.PyNode(user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
-				rig_dict['root2-ctrl-name'] = god2_ctrl
 
 			else:
 				god_ctrl = pm.circle(n=(component + '_' + user.prefs['ctrl-suffix']), nry=1, nrz=0, ch=False)[0]
@@ -534,12 +541,17 @@ def initiateRig():
 					pm.connectAttr('{}.scaleY'.format(god_ctrl), '{}.scale{}'.format(god_ctrl, axis))
 					pm.setAttr('{}.scale{}'.format(god_ctrl, axis), lock=True)
 
-				god2_ctrl = controls.control(
-					name=user.prefs['root2-ctrl-name'], shape='omni-circle', size=10.2, colour='pale-orange')
-				pm.parent(god2_ctrl.null, god_ctrl)
-				rig_dict['root2-ctrl-name'] = god2_ctrl.ctrl
+				god2_ctrl = pm.curve(
+					d=1, p=controls.controllerShapes['omni-circle'], n=user.prefs['root2-ctrl-name'] + '_' +
+																	   user.prefs['ctrl-suffix'])
+				scaleCtrlShape(god2_ctrl, scale_mult=10.2, line_width=2)
+				setOverrideColour('pale-orange', god2_ctrl)
+				# god2_ctrl = controls.control(
+				# 	name=user.prefs['root2-ctrl-name'], shape='omni-circle', size=10.2, colour='pale-orange')
+				pm.parent(god2_ctrl, god_ctrl)
 
 			rig_dict[component] = god_ctrl
+			rig_dict['root2-ctrl-name'] = god2_ctrl
 
 			if socket != 'World':
 				pm.parent(god_ctrl, socket)
@@ -574,8 +586,9 @@ def initiateRig():
 
 	root2_world_outputs = rig_dict['root2-ctrl-name'].worldMatrix[0].outputs()
 
+	#!FIXME: this errors if decompose Matrix plugin not loaded??
 	if 'decomposeMatrix' not in map(lambda x: x.nodeType(), root2_world_outputs):
-		root2_dcmp = pm.createNode('decomposeMatrix')
+		root2_dcmp = pm.createNode('decomposeMatrix', n=rig_dict['root2-ctrl-name'] + '_dcmpM')
 		rig_dict['root2-ctrl-name'].worldMatrix[0] >> root2_dcmp.inputMatrix
 	else:
 		for node in root2_world_outputs:

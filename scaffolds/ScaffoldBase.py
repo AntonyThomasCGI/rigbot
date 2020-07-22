@@ -114,13 +114,15 @@ class Scaffold(object):
 		utils.scaleCtrlShape(curv, scale_mult=0.5, line_width=3)
 
 		shape = curv.getChildren()[0]
-		utils.setOverrideColour('grey-blue', shape)
 		pm.parent(shape, self.root, r=True, s=True)
 
 		pm.delete(curv)
+
+		# setting colours
 		utils.setOverrideColour(user.prefs['default-jnt-colour'], [self.chain, shape])
 		utils.setOverrideColour(user.prefs['module-root-colour'], self.root)
 		utils.setOutlinerColour(user.prefs['module-root-colour'], self.root)
+		utils.setOverrideColour('grey-blue', shape)
 	# end def display():
 
 	# ------------------------------------------------------------------------------------------------------------------
