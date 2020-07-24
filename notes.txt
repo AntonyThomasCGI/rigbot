@@ -22,10 +22,10 @@ layout bit of a mess:
 
 dict_filter = lambda x, y: dict([(i, x[i]) for i in x if i in y])  # nice, filters dict for certain keys?
 
+maybe name is component not module :thinking:
 
 
-
-
+!dont name module names inputs outputs with just "input" "output"
 
 
 
