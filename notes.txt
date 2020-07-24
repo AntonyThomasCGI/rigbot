@@ -17,7 +17,10 @@ layout bit of a mess:
 
 > turned off statement has no effect inspection so >> // works but might want to check later
 
-dict_filter = lambda x, y: dict([(i, x[i]) for i in x if i in y])  # nice
+- kill orient/clean joint orient
+
+
+dict_filter = lambda x, y: dict([(i, x[i]) for i in x if i in y])  # nice, filters dict for certain keys?
 
 
 
