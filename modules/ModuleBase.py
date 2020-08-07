@@ -1,7 +1,6 @@
 import pymel.core as pm
 
-from ..rig import utils
-from .. import user
+from .. import user, utils
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -21,6 +20,8 @@ class ModuleBaseException(Exception):
 class ModuleBase(object):
 
 	# TODO: add extra prefs dict for modules? eg; ctrl shapes, ctrl colours ? anything 'hard coded'
+	# maybe could add functor to also take selected objects and get scaffold_obj from that
+	# TODO: lock inheritsTransform
 
 	def __init__(self, scaffold_obj):
 
@@ -28,73 +29,109 @@ class ModuleBase(object):
 		self.chain = scaffold_obj.chain
 		self.name = scaffold_obj.name
 		self.socket = scaffold_obj.socket
+		self.socketDcmp = None
 
 		# rig globals
-		self.rigBase = self.jointsGrp = self.modulesGrp = None
-
+		self.rigGlobals = {}
 		self.getRigGlobals()
 
 		# module globals
-		self.moduleInputs = self.moduleOutputs = self.moduleControls = self.transformGrp = self.noTransformGrp = None
-
+		self.modGlobals = {}
 		self.registerModule()
 
-		# rig attributes
-		self.controllers = None
-
-		pm.parent(user.prefs['root-joint'], self.jointsGrp)
-
+		# module attributes
+		self.controllers = []
 	# end def __init__():
 
-	# 	def __str__(self):
-	# 		return 'rb.{}({})'.format(self.__class__.__name__, self.name)
-	# 	# end def __str__():
+	def __str__(self):
+		return 'rb.{}({})'.format(self.__class__.__name__, self.name)
+	# end def __str__():
 
-	# 	def __repr__(self):
-	# 		return self.__str__()
-	# 	# end def __repr__():
+	def __repr__(self):
+		return self.__str__()
+	# end def __repr__():
 
-	def registerModule(self):
-		self.moduleInputs = pm.group(n=self.name + '_inputs', em=True)
-		self.moduleOutputs = pm.group(n=self.name + '_outputs', em=True)
-		self.moduleControls = pm.group(n=self.name + '_controls', em=True)
-		self.transformGrp = pm.group(n=self.name + '_transform', em=True)
-		self.noTransformGrp = pm.group(n=self.name + '_noTransform', em=True)
-		mod_grp = pm.group(self.moduleInputs, self.moduleOutputs, self.moduleControls, n=self.name + '_cmpnt')
-		rig_dag_grp = pm.group(self.transformGrp, self.noTransformGrp, n=self.name + '_rigDag')
-		pm.parent(rig_dag_grp, mod_grp)
-		pm.parent(mod_grp, self.modulesGrp)
-	# make connections
-	# end registerModule():
-
-	def preBuild(self):
-		pass
+	def __len__(self):
+		if self.chain:
+			return len(self.chain)
+		else:
+			return 0
+	# end def __len__():
 
 	# ------------------------------------------------------------------------------------------------------------------
-	# probably don't want to call build() in the init but from builder after class initialized
+	def preBuild(self):
+		# clean joint orients
+		# generate ctrls
+		raise ModuleBaseException('Invalid subclass-- preBuild() function not implemented.')
+	# end def preBuild():
+
+	# ------------------------------------------------------------------------------------------------------------------
 	def build(self):
 		raise ModuleBaseException('Invalid subclass-- build() function not implemented.')
+	# end def build():
 
-	# 	# ------------------------------------------------------------------------------------------------------------------
-	# 	def buildCleanup(self):
-	# 		# eg; transfers custom attrs from module root jnt
-	# 		pass
-	# 	#end def buildCleanup():
+	# ------------------------------------------------------------------------------------------------------------------
+	def postBuild(self):
+		# eg; transfers custom attrs from module root jnt
+		# also swaps the BIND jnt connection to socket with module output
+		# containers? or maybe separate function
+		# can probably implement this once and every module uses it
+		pass
+	# end def postBuild():
 
+	@property
+	def root(self):
+		if self.chain:
+			return self.chain[0]
+		else:
+			return None
+	# end def root():
+
+	# ------------------------------------------------------------------------------------------------------------------
+	# .												utility functions
 	# ------------------------------------------------------------------------------------------------------------------
 	def getRigGlobals(self):
 
 		def validateExists(item):
-			if pm.objExists(item):
-				return pm.PyNode(item)
-			else:
+			if not pm.objExists(item):
 				utils.initiateRig()
-				return pm.PyNode(item)
 
-		# TODO: get rigBase decomposeMatrix not node ?
-		# TODO: actually all of the globals should probably hook through module inputs node ahh fuck
-		self.rigBase = validateExists(user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
-		self.jointsGrp = validateExists(user.prefs['joint-group-name'])
-		self.modulesGrp = validateExists('modules')
+			return pm.PyNode(item)
+		# end def validateExists():
+
+		self.rigGlobals['rootCtrl'] = validateExists(user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
+		self.rigGlobals['jointsGrp'] = validateExists(user.prefs['joint-group-name'])
+		self.rigGlobals['modulesGrp'] = validateExists(user.prefs['module-group-name'])
 	# end def getRigGlobals():
+
+	# ------------------------------------------------------------------------------------------------------------------
+	def registerModule(self):
+		# make null hierarchy
+		self.modGlobals['modInput'] = pm.group(n=self.name + '_input', em=True)
+		self.modGlobals['modOutput'] = pm.group(n=self.name + '_output', em=True)
+		self.modGlobals['modCtrls'] = pm.group(n=self.name + '_controls', em=True)
+		self.modGlobals['transformGrp'] = pm.group(n=self.name + '_transform', em=True)
+		self.modGlobals['noTransformGrp'] = pm.group(n=self.name + '_noTransform', em=True)
+
+		mod_grp = pm.group(
+			self.modGlobals['modInput'], self.modGlobals['modOutput'], self.modGlobals['modCtrls'], n=self.name + '_mod'
+		)
+		rig_dag_grp = pm.group(
+			self.modGlobals['transformGrp'], self.modGlobals['noTransformGrp'], n=self.name + '_rigDag'
+		)
+		pm.parent(rig_dag_grp, mod_grp)
+		pm.parent(mod_grp, self.rigGlobals['modulesGrp'])
+
+		# make connections
+		utils.makeAttrFromDict(self.modGlobals['modInput'], {'name': 'RB_Socket', 'at': 'matrix'})
+		self.socket.worldMatrix[0] >> self.modGlobals['modInput'].RB_Socket
+
+		self.socketDcmp = pm.createNode('decomposeMatrix', n=self.name + '_socket_dcmpM')
+		self.modGlobals['modInput'].RB_Socket >> self.socketDcmp.inputMatrix
+
+		for item in [self.modGlobals['modCtrls'], self.modGlobals['transformGrp']]:
+			self.socketDcmp.outputTranslate >> item.translate
+			self.socketDcmp.outputRotate >> item.rotate
+			self.socketDcmp.outputScale >> item.scale
+	# end registerModule():
 # end class ModuleBase():

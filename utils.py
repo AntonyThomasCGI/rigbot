@@ -1,11 +1,8 @@
 import pymel.core as pm
 
 import os
-import copy
 
-from .. import user
-
-from . import controls
+from . import user, data
 
 # ----------------------------------------------------------------------------------------------------------------------
 """
@@ -19,65 +16,6 @@ from . import controls
 
 class UtilsException(Exception):
 	pass
-
-
-class Colours:
-
-	_colourRGB = {
-		"yellow":		[1.0, 	1.0, 	0.0],
-		"green":		[0.0, 	1.0, 	0.0],
-		"blue":			[0.0, 	0.0, 	1.0],
-		"dark-blue":	[0.0,	0.117,	0.117],  # default
-		"red":			[1.0, 	0.0, 	0.0],
-		"orange":		[1.0, 	0.17, 	0.0],
-		"pale-orange":	[1.0, 	0.25, 	0.1],
-		"grey-blue":	[0.03,	0.03,	0.06],
-		"grey":			[0.038, 0.038, 	0.038],
-		"white":		[1.0,	1.0,	1.0],
-		"purple":		[0.25,	0.0,	0.80],
-	}
-
-	@staticmethod
-	def get_rgb_value(colour):
-		"""
-		Used to look up rgb colour in _colourRGB dictionary
-
-		:param colour: string name of colour
-		:return: rgb 0-1 of colour
-		"""
-		for item in Colours._colourRGB:
-			if item == colour:
-				return Colours._colourRGB[item]
-		raise ValueError('%s is not an available colour!' % colour)
-	# end def get_rgb_value():
-
-	@staticmethod
-	def get_linear_value(colour):
-		"""
-		Look up rgb colour in _colourRGB dictionary and convert to linear colour space
-
-		:param colour: string name of colour
-		:return: rgb 0-1 of colour converted to linear space
-		"""
-		rgb_colour = copy.copy(Colours.get_rgb_value(colour))
-		for index, clr in enumerate(rgb_colour):
-			shifted_value = (1.055 * (clr ** (1.0 / 2.4)) - 0.055)
-			if 0 > shifted_value:
-				rgb_colour[ index ] = 0.0
-			elif 1 < shifted_value:
-				rgb_colour[ index ] = 1.0
-			else:
-				rgb_colour[ index ] = shifted_value
-		return rgb_colour
-	# end def get_linear_value():
-
-	@staticmethod
-	def list():
-		print('Available colours are:')
-		for key in Colours._colourRGB:
-			print key
-	# end def list():
-# end class Colours:
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -119,7 +57,7 @@ def setOverrideColour(colour, *args):
 	item_ls = makePynodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
 
 	if isinstance(colour, basestring):
-		colour = Colours.get_rgb_value(colour)
+		colour = data.Colours.get_rgb_value(colour)
 
 	for item in item_ls:
 		try:
@@ -127,7 +65,6 @@ def setOverrideColour(colour, *args):
 
 			# check to see if getShapes returned empty list
 			if shapes:
-				print(shapes)
 				for shape in shapes:
 					shape.overrideEnabled.set(1)
 					shape.drawOverride.overrideRGBColors.set(1)
@@ -155,7 +92,7 @@ def setOutlinerColour(colour, *args):
 	item_ls = makePynodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
 
 	if isinstance(colour, basestring):
-		colour = Colours.get_linear_value(colour)
+		colour = data.Colours.get_linear_value(colour)
 
 	for item in item_ls:
 		item.useOutlinerColor.set(1)
@@ -393,7 +330,7 @@ def getFilteredDir(folder):
 	:return: string name of python files that are not __init__ or end with Base.py
 	"""
 
-	main_dir = os.path.dirname(os.path.dirname(os.path.abspath(os.path.realpath(__file__))))
+	main_dir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 
 	files = [
 		x.split('.')[0] for x in os.listdir(main_dir+'\\{}'.format(folder))
@@ -419,7 +356,7 @@ def makeRoot():
 		pm.select(deselect=True)
 		root_jnt = pm.joint(n=user.prefs['root-joint'], radius=0.001)
 
-		ctrl = pm.curve(d=1, p=controls.controllerShapes['locator'], n=(user.prefs['root-joint'] + '_display'))
+		ctrl = pm.curve(d=1, p=data.controllerShapes['locator'], n=(user.prefs['root-joint'] + '_display'))
 		scaleCtrlShape(ctrl, scale_mult=1.43, line_width=3)
 
 		ctrl_shape = ctrl.getChildren()[0]
@@ -467,7 +404,7 @@ def getModuleChildren(modroot):
 
 	def filterChildren(jnt):
 
-		path_dict = { k:v for k,v in enumerate(jnt.fullPath().split('|')) }
+		path_dict = {k: v for k, v in enumerate(jnt.fullPath().split('|'))}
 
 		mod_index = 0
 		other_mod_index = []
@@ -519,7 +456,7 @@ def makeNameUnique(name, suffix='_*'):
 # ----------------------------------------------------------------------------------------------------------------------
 def initiateRig():
 	"""
-	Creates default rig hierarchy to socket rig modules into
+	Creates default rig hierarchy that modules rely on
 	:return: dict of global groups and ctrls
 	"""
 
@@ -542,12 +479,12 @@ def initiateRig():
 					pm.setAttr('{}.scale{}'.format(god_ctrl, axis), lock=True)
 
 				god2_ctrl = pm.curve(
-					d=1, p=controls.controllerShapes['omni-circle'], n=user.prefs['root2-ctrl-name'] + '_' +
-																	   user.prefs['ctrl-suffix'])
+					d=1, p=data.controllerShapes['omni-circle'], n=user.prefs['root2-ctrl-name'] + '_' +
+					user.prefs['ctrl-suffix']
+				)
 				scaleCtrlShape(god2_ctrl, scale_mult=10.2, line_width=2)
 				setOverrideColour('pale-orange', god2_ctrl)
-				# god2_ctrl = controls.control(
-				# 	name=user.prefs['root2-ctrl-name'], shape='omni-circle', size=10.2, colour='pale-orange')
+
 				pm.parent(god2_ctrl, god_ctrl)
 
 			rig_dict[component] = god_ctrl
@@ -586,7 +523,8 @@ def initiateRig():
 
 	root2_world_outputs = rig_dict['root2-ctrl-name'].worldMatrix[0].outputs()
 
-	#!FIXME: this errors if decompose Matrix plugin not loaded??
+	root2_dcmp = None
+	# !FIXME: this errors if decompose Matrix plugin not loaded??
 	if 'decomposeMatrix' not in map(lambda x: x.nodeType(), root2_world_outputs):
 		root2_dcmp = pm.createNode('decomposeMatrix', n=rig_dict['root2-ctrl-name'] + '_dcmpM')
 		rig_dict['root2-ctrl-name'].worldMatrix[0] >> root2_dcmp.inputMatrix
@@ -607,6 +545,9 @@ def initiateRig():
 			root2_dcmp.outputTranslate >> node.translate
 			root2_dcmp.outputRotate >> node.rotate
 			root2_dcmp.outputScale >> node.scale
+
+	# parent bind joints
+	pm.parent(user.prefs['root-joint'], rig_dict[user.prefs['joint-group-name']])
 
 	return rig_dict
 # end def initiateRig():

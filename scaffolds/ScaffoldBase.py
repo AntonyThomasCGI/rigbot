@@ -1,7 +1,6 @@
 import pymel.core as pm
 
-from ..rig import controls, utils
-from .. import user
+from .. import user, utils, data
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -31,12 +30,15 @@ class ScaffoldException(Exception):
 	pass
 
 
-# potentially Scaffold should inherit a functor somewhere to deal with the module root already existing vs creating new
-# https://www.geeksforgeeks.org/functors-use-python/
 class Scaffold(object):
 
-	# Specify what modules can build from this scaffold
 	# TODO: include all modules in Scaffold base class i guess..?
+	# or:
+	# potentially Scaffold should inherit a functor somewhere to deal with the module root already existing vs creating
+	# new scaffold and can deal with sending to the right scaffold to have the required module
+	# https://www.geeksforgeeks.org/functors-use-python/
+
+	# Specify what modules can build from this scaffold
 	_availableModules = utils.getFilteredDir('modules')
 	_availableModules.append(' ')
 	
@@ -110,7 +112,7 @@ class Scaffold(object):
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def display(self):
-		curv = pm.curve(d=1, p=controls.controllerShapes['locator'], n=(self.name + '_display'))
+		curv = pm.curve(d=1, p=data.controllerShapes['locator'], n=(self.name + '_display'))
 		utils.scaleCtrlShape(curv, scale_mult=0.5, line_width=3)
 
 		shape = curv.getChildren()[0]
@@ -119,10 +121,10 @@ class Scaffold(object):
 		pm.delete(curv)
 
 		# setting colours
-		utils.setOverrideColour(user.prefs['default-jnt-colour'], [self.chain, shape])
+		utils.setOverrideColour(user.prefs['default-jnt-colour'], self.chain)
 		utils.setOverrideColour(user.prefs['module-root-colour'], self.root)
 		utils.setOutlinerColour(user.prefs['module-root-colour'], self.root)
-		utils.setOverrideColour('grey-blue', shape)
+		utils.setOverrideColour(user.prefs['default-jnt-colour'], shape)
 	# end def display():
 
 	# ------------------------------------------------------------------------------------------------------------------
@@ -140,7 +142,7 @@ class Scaffold(object):
 	# end def tag():
 
 	# ------------------------------------------------------------------------------------------------------------------
-	# . 											properties
+	# . 												properties
 	# ------------------------------------------------------------------------------------------------------------------
 
 	@property

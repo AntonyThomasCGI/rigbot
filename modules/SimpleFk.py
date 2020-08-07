@@ -16,10 +16,7 @@ class SimpleFk(ModuleBase):
 		super(SimpleFk, self).__init__(*args)
 
 	def build(self):
-
-		print('>> Building')
-		print self.chain
-		print self.name
-		print('|| Done')
+		pass
+		#for jnt in range(self.length - 1 + )
 	# end def makeBind(self):
 # end class SingleChain(RBModule):

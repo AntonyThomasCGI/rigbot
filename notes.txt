@@ -1,31 +1,15 @@
 #notes.txt
 
-- ctrl nulls are all grey outliner colour so are invisible except the visibility nulls which could have override controls
-for the visibility of ctrls under them
-
 - have attrs on BIND save out to settings loc or something as dict in string
 
-	-builder could have selected and PyNode-like classes to transform selected module roots into class objects
-
-- could consider moving tag() and display() functions out of ScaffoldBase
-
-layout bit of a mess:
-    > probably shouldn't be two ways to make scaffold?
-    > selected() doesnt make much sense in builder... maybe utils should somehow import into the rb namespace ?? then
-      add selected() to that
-^>actually would be nice if everything imported from one import :thinking:
 
 > turned off statement has no effect inspection so >> // works but might want to check later
 
-- kill orient/clean joint orient
+- kill orient/clean joint orient > then need special function to mirror joints + clean orients
 
 
 dict_filter = lambda x, y: dict([(i, x[i]) for i in x if i in y])  # nice, filters dict for certain keys?
 
-maybe name is component not module :thinking:
-
-
-!dont name module names inputs outputs with just "input" "output"
 
 
 

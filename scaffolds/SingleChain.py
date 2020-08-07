@@ -1,7 +1,6 @@
 from .ScaffoldBase import Scaffold
 
-from ..rig import utils
-from .. import user
+from .. import user, utils
 
 # ----------------------------------------------------------------------------------------------------------------------
 """
