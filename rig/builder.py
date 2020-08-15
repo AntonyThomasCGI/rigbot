@@ -41,6 +41,7 @@ class Scaffold(object):
 		if self._moduleType not in self._availableModules:
 			raise ScaffoldException('Module type: {} is not in list of available modules.'.format(self._moduleType))
 
+		self._includeEndJoint = module_root.getAttr('RB_include_end_joint')
 		self._name = self.getModName(module_root)
 		self._length = set()
 		self.socket = module_root.listRelatives(parent=True)[0]
@@ -55,25 +56,22 @@ class Scaffold(object):
 	# end def __repr__():
 
 	# ------------------------------------------------------------------------------------------------------------------
-	# . 												properties
+	#  													properties
 	# ------------------------------------------------------------------------------------------------------------------
 	@property
 	def socket(self):
 		return self._socket
-
 	# end def socket():
 
 	@socket.setter
 	def socket(self, new_parent):
 		pm.parent(self.root, new_parent)
 		self._socket = new_parent
-
-	# end def socket():
+	# end socket.setter
 
 	@property
 	def name(self):
 		return self._name
-
 	# end def name():
 
 	@name.setter
@@ -82,14 +80,14 @@ class Scaffold(object):
 			for jnt in self.chain:
 				pm.rename(jnt, jnt.replace(self._name, new_name))
 		self._name = new_name
+	# end name.setter
 
-	# end def name():
+	# TODO: change moduleType and includeEndJoint getters to actually query the attribute? probably better.
 
 	@property
 	def moduleType(self):
 		return self._moduleType
-
-	# end def module():
+	# end def moduleType():
 
 	@moduleType.setter
 	def moduleType(self, new_module):
@@ -100,7 +98,23 @@ class Scaffold(object):
 				raise ScaffoldException("--This scaffold does not support module type: {}".format(new_module))
 
 		self._moduleType = new_module
-	# end def moduleType():
+	# end moduleType.setter
+
+	@property
+	def includeEndJoint(self):
+		return self._includeEndJoint
+	# end def includeEndJoint():
+
+	@includeEndJoint.setter
+	def includeEndJoint(self, new_bool):
+		if not isinstance(new_bool, bool):
+			raise ValueError('--includeEndJoint has to be set with a bool value')
+
+		if self.root.hasAttr('RB_include_end_joint'):
+			self.root.RB_module_type.set(new_module)
+
+		self._includeEndJoint = new_bool
+	# end includeEndJoint.setter
 
 	@property
 	def root(self):
@@ -142,17 +156,16 @@ class Scaffold(object):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def makeScaffold(module_type=' ', length=1, name='untitled', socket='root'):
+def makeScaffold(module_type=' ', length=1, name='untitled', socket='root', include_end=1):
 	"""
-	Makes new scaffold and reloads modules
+	Makes new scaffold for auto rigger to build from.
 
-	:param module_type: (string) type of module chain will build into
-	:param kwargs: builder kwargs, see: rigbot.scaffolds.ScaffoldBase
-	:return:
-	Builder kwargs: 		length (int) 	= joint chain length
-							module (string) = module type to tag module root with
-							name (string) 	= naming convention prefix
-							socket (PyNode or string) = parent for module, default=root
+	:param module_type: (string) Type of module chain will build into.
+	:param length: (int) Joint chain length.
+	:param name: (string) Naming convention prefix.
+	:param socket: (PyNode or string) Parent for module.
+	:param include_end: (bool) If auto rigger should generate controllers on end joint.
+	:return: scaffold class object
 	"""
 
 	chain = utils.makeJointChain(length, name, user.prefs['bind-skeleton-suffix'])
@@ -203,7 +216,7 @@ def makeScaffold(module_type=' ', length=1, name='untitled', socket='root'):
 		{'name': 'RB_MODULE_ROOT', 'at': 'enum', 'en': ' ', 'k': 0, 'l': 1},
 		{'name': 'RB_module_type', 'k': 0, 'at': 'enum', 'en': (':'.join(all_modules)),
 			'dv': (all_modules.index(module_type))},
-		{'name': 'RB_include_end_joint', 'k': 0, 'at': 'bool', 'dv': 1},
+		{'name': 'RB_include_end_joint', 'k': 0, 'at': 'bool', 'dv': include_end},
 	]
 	for attr_dict in default_tags:
 		utils.makeAttrFromDict(chain[0], attr_dict)
@@ -213,22 +226,59 @@ def makeScaffold(module_type=' ', length=1, name='untitled', socket='root'):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def batchBuild(modules=None):
+def batchBuild(scaffolds=None):
 	"""
 	Batch rig all modules or pass modules to rig
 
-	:param modules: modules to rig
+	:param modules: list of scaffold objects to rig, if not specified attempts to batch rig every module in scene.
 	:return: list of module classes?? ##TODO
 	"""
+	# TODO: ' ' moduleType still needs to build input/output to get socket info to child modules
+	# TODO:		also to clean the orients and scale comp.
+	# TODO: or maybe the point is it doesn't rig but should figure out way to make scale work properly with children?
+
+	reload(mod)
+
 	utils.initiateRig()
 
-	if not modules:
-		modules = getModules()
+	if not scaffolds:
+		scaffolds = getModules()
 
+	print('>> Batch Build: Validating Scaffolds...')
+	# TODO: something more concrete than just checking moduleType exists here?
+
+	modules = []
+	for scaffold in scaffolds:
+		if scaffold.moduleType in utils.getFilteredDir('modules'):
+			mod_class = getattr(mod, scaffold.moduleType)
+			modules.append(mod_class(scaffold))
+		elif scaffold.moduleType == ' ':
+			continue
+		else:
+			print(
+				'// Warning: Skipping {}, module type does not appear to be implemented or is missing source code.'.
+					format(scaffold.moduleType)
+			)
+
+	print('>> Batch Build: Build Starting...')
 	for module in modules:
-		if module.moduleType in utils.getFilteredDir('modules'):
-			mod_class = getattr(mod, module.moduleType)
-			mod_class(module)
+		module.registerModule()
+
+	print('>> Batch Build: Pre Building...')
+	for module in modules:
+		module.preBuild()
+
+	print('>> Batch Build: Building...')
+	for module in modules:
+		module.build()
+
+	print('>> Batch Build: Post Building...')
+	for module in modules:
+		module.postBuild()
+
+	print('>> Batch Build: Completed')
+
+	# TODO: would be cool to do some error logging/ warnings here at some point
 # end def batchBuild():
 
 

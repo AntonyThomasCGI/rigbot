@@ -1,7 +1,3 @@
-import pymel.core as pm
-
-from .. import utils, user, data
-
 # ----------------------------------------------------------------------------------------------------------------------
 """
 
@@ -10,6 +6,10 @@ from .. import utils, user, data
 
 """
 # ----------------------------------------------------------------------------------------------------------------------
+
+import pymel.core as pm
+
+from .. import utils, user, data
 
 
 # TODO: L / R auto colouring
@@ -35,7 +35,6 @@ class control(object):
 		utils.scaleCtrlShape(self.ctrl, scale_mult=size, line_width=line_width)
 
 		self.null = pm.group(n=self.ctrl + '_null', em=True)
-		# utils.setOutlinerColour('grey', self.null)
 
 		self.offsets = []
 		for i in range(offsets):

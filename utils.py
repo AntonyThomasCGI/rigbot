@@ -54,7 +54,7 @@ def setOverrideColour(colour, *args):
 	:param args: `node or string` nodes to apply change
 	"""
 
-	item_ls = makePynodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
+	item_ls = makePyNodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
 
 	if isinstance(colour, basestring):
 		colour = data.Colours.get_rgb_value(colour)
@@ -89,7 +89,7 @@ def setOutlinerColour(colour, *args):
 	:param args: nodes to apply change
 	"""
 
-	item_ls = makePynodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
+	item_ls = makePyNodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
 
 	if isinstance(colour, basestring):
 		colour = data.Colours.get_linear_value(colour)
@@ -101,7 +101,7 @@ def setOutlinerColour(colour, *args):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def makePynodeList(*args, **kwargs):
+def makePyNodeList(*args, **kwargs):
 	"""
 	Return list of PyNodes
 
@@ -123,17 +123,17 @@ def makePynodeList(*args, **kwargs):
 				actual_list.append(item)
 
 		return actual_list
-	# end def makeListRecursive(passed_args, actual_list=None):
+	# end def makeListRecursive():
 
 	# only attempt PyNodes at this point, after the above list has been filtered
 	objects = [pm.PyNode(x) for x in makeListRecursive(args) if pm.objExists(x)]
 
 	# filter by type
-	if obType is not None:
+	if obType:
 		objects = pm.ls(objects, type=obType)
 
 	return objects
-# end def makePynodeList():
+# end def makePyNodeList():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -189,9 +189,9 @@ def makeAttrFromDict(ob, attr_data):
 	"""
 	Creates attribute from dictionary - sets keyable=True and channelBox=True by default
 
-	:param ob: node to add attribute to
-	:param attr_data: flags for addAttr/setAttr command
-	:return:
+	:param ob: single PyNode to add attribute to
+	:param attr_data: dictionary of flags for addAttr/setAttr command
+	:return: attribute
 	"""
 
 	try:
@@ -219,6 +219,7 @@ def makeAttrFromDict(ob, attr_data):
 
 	# if already has attr then delete
 	if ob.hasAttr(attr_name):
+		print('//Warning: Attribute already exists, overriding.')
 		ob.deleteAttr(attr_name)
 
 	ob.addAttr(attr_name, **attr_data)
@@ -226,11 +227,13 @@ def makeAttrFromDict(ob, attr_data):
 
 	# channel box flag is ignored if attr is keyable so this:
 	if 'keyable' in attr_data:
-		if not attr_data[ 'keyable' ]:
+		if not attr_data['keyable']:
 			ob.setAttr(attr_name, cb=channel_box)
 	else:
-		if not attr_data[ 'k' ]:
+		if not attr_data['k']:
 			ob.setAttr(attr_name, cb=channel_box)
+
+	return ob.attr(attr_name)
 # end def makeAttrFromDict():
 
 
@@ -246,7 +249,7 @@ def scaleCtrlShape(*args, **kwargs):
 	scale_mult = kwargs.pop('scale_mult', 1)
 	line_width = kwargs.pop('line_width', None)
 
-	ctrl_ls = makePynodeList(args)
+	ctrl_ls = makePyNodeList(args)
 
 	for ctrl in ctrl_ls:
 		shapes = ctrl.getChildren()
@@ -280,7 +283,7 @@ def lockHide(attr_data, *args):
 	:param args:		list of nodes to lockHide
 	"""
 
-	objs = makePynodeList(args)
+	objs = makePyNodeList(args)
 
 	to_lock = []
 
@@ -311,11 +314,34 @@ def lockHide(attr_data, *args):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def parentByList(list):
-	list = makePynodeList(list)
-	for i in range(len(list)-1):
-		pm.parent(list[i], list[i+1])
+def parentByList(node_list):
+	node_list = makePyNodeList(node_list)
+	for i in range(len(node_list)-1):
+		pm.parent(node_list[i], node_list[i+1])
 # end def parentByList():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+def cleanJointOrients(joints):
+	joints = makePyNodeList(joints, type='joint')
+
+	for jnt in joints:
+		jnt_mtx = jnt.matrix.get()
+		jnt.jointOrient.set(0, 0, 0)
+		pm.xform(jnt, m=jnt_mtx)
+# end def cleanJointOrients():
+
+
+def cleanScaleCompensate(jnts):
+	jnts = makePyNodeList(jnts, type='joint')
+
+	for jnt in jnts:
+		if not jnt.segmentScaleCompensate.get(lock=True):
+			jnt.segmentScaleCompensate.set(0, lock=True)
+		inv_scale_input = jnt.inverseScale.inputs(p=True)
+		if inv_scale_input:
+			inv_scale_input[0] // jnt.inverseScale
+# end def cleanScaleCompensate():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
