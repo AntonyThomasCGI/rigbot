@@ -33,14 +33,9 @@ class ModuleBase(object):
 		self.socketDcmp = None
 
 		# get rig globals
-		# TODO: maybe don't need rootCtrl or jointsGrp here? > would need cog_ctrl?
-		try:
-			self.rigGlobals = {
-				'rootCtrl': pm.PyNode(user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix']),
-				'jointsGrp': pm.PyNode(user.prefs['joint-group-name']),
-				'modulesGrp': pm.PyNode(user.prefs['module-group-name']),
-			}
-		except pm.MayaNodeError:
+		if pm.objExists(user.prefs['module-group-name']):
+			self.moduleGrp = pm.PyNode(user.prefs['module-group-name'])
+		else:
 			raise ModuleBaseException('--Rig has not been initiated. try use utils.initiateRig().')
 
 		# module globals
@@ -80,7 +75,7 @@ class ModuleBase(object):
 			self.modGlobals['transformGrp'], self.modGlobals['noTransformGrp'], n=self.name + '_rigDag'
 		)
 		pm.parent(rig_dag_grp, mod_grp)
-		pm.parent(mod_grp, self.rigGlobals['modulesGrp'])
+		pm.parent(mod_grp, self.moduleGrp)
 
 		# make connections
 		utils.makeAttrFromDict(self.modGlobals['modInput'], {'name': 'RB_Socket', 'at': 'matrix'})
@@ -97,9 +92,6 @@ class ModuleBase(object):
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def preBuild(self):
-		# clean joint orients
-		# generate ctrls
-		# TODO: need to reset bind pose here if bind joints already connected to skin cluster
 		utils.cleanJointOrients(self.chain)
 		utils.cleanScaleCompensate(self.chain)
 		# raise ModuleBaseException('Invalid subclass-- preBuild() function not implemented.')
@@ -107,7 +99,9 @@ class ModuleBase(object):
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def build(self):
-		raise ModuleBaseException('Invalid subclass-- build() function not implemented.')
+		# raise ModuleBaseException('Invalid subclass-- build() function not implemented.')
+		# maybe can send ' ' through this class if don't error for not implementing functions.
+		pass
 	# end def build():
 
 	# ------------------------------------------------------------------------------------------------------------------
@@ -115,7 +109,11 @@ class ModuleBase(object):
 		# eg; transfers custom attrs from module root jnt
 		# also swaps the BIND jnt connection to socket with module output
 		# can probably implement this once and every module uses it
-		pass
+		root_shape = self.root.getShape()
+		pm.delete(root_shape)
+		self.root.useOutlinerColor.set(0)
+		# for jnt in self.chain:
+		# 	jnt.overrideEnabled.set(0)
 	# end def postBuild():
 
 	def containerize(self):

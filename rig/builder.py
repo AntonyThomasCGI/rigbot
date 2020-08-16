@@ -231,14 +231,8 @@ def batchBuild(scaffolds=None):
 	Batch rig all modules or pass modules to rig
 
 	:param modules: list of scaffold objects to rig, if not specified attempts to batch rig every module in scene.
-	:return: list of module classes?? ##TODO
+	:return: None
 	"""
-	# TODO: ' ' moduleType still needs to build input/output to get socket info to child modules
-	# TODO:		also to clean the orients and scale comp.
-	# TODO: or maybe the point is it doesn't rig but should figure out way to make scale work properly with children?
-
-	reload(mod)
-
 	utils.initiateRig()
 
 	if not scaffolds:
@@ -253,7 +247,7 @@ def batchBuild(scaffolds=None):
 			mod_class = getattr(mod, scaffold.moduleType)
 			modules.append(mod_class(scaffold))
 		elif scaffold.moduleType == ' ':
-			continue
+			modules.append(mod.ModuleBase(scaffold))
 		else:
 			print(
 				'// Warning: Skipping {}, module type does not appear to be implemented or is missing source code.'.

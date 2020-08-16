@@ -20,7 +20,6 @@ prefs = {
 	'default-jnt-colour'	: 'grey-blue',
 	'module-root-colour'	: 'pale-orange',
 
-	'joint-group-name'		: 'joints',
 	'module-group-name'		: 'modules',
 
 	'root-ctrl-name'		: 'GOD',
@@ -44,7 +43,7 @@ class RigNode(object):
 
 
 # RigTree = RigNode('RIG', [
-# 			RigNode('ctrl_grp', [RigNode(prefs['root-ctrl-name'])]), RigNode(prefs['joint-group-name']),
+# 			RigNode('ctrl_grp', [RigNode(prefs['root-ctrl-name'])]), RigNode(prefs['root-joint']),
 # 			RigNode(prefs['module-group-name'])
 # 	]
 # )
@@ -53,6 +52,6 @@ class RigNode(object):
 RigTree = RigNode(
 	prefs['root-ctrl-name'],
 		[
-		RigNode(prefs['joint-group-name']), RigNode(prefs['module-group-name'])
+		RigNode(prefs['root-joint']), RigNode(prefs['module-group-name'])
 		]
 	)
