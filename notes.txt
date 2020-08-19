@@ -1,14 +1,14 @@
 #notes.txt
 
-- have attrs on BIND save out to settings loc or something as dict in string
-
 
 > turned off statement has no effect inspection so >> // works but might want to check later
 
-- kill orient/clean joint orient > then need special function to mirror joints + clean orients
+> is there a clean way to represent module node graphs, then when un-building could compare changes to default nodes
+    and re-build changes with different joint positions.  How to tell if preBuild() or build() :thinking:
+
+> for modules that don't output a matrix need some scripts to compose matrix out of joint connections + static offsets.
 
 
-dict_filter = lambda x, y: dict([(i, x[i]) for i in x if i in y])  # nice, filters dict for certain keys?
 
 
 
