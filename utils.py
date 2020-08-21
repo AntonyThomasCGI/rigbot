@@ -10,7 +10,6 @@
 import pymel.core as pm
 
 import os
-import ast
 
 from . import user, data
 
@@ -47,6 +46,7 @@ def makeJointChain(length, name, suffix='jnt', rad=1):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# TODO: flag to use linear colour, same with setOutLinerColour()
 def setOverrideColour(colour, *args):
 	"""
 	Set DAG node override colour
@@ -363,21 +363,20 @@ def cleanScaleCompensate(jnts):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# def getSkinnedJoints(bind_pose_nodes=None):
-# 	"""
-# 	Gets joints connected to bind pose nodes.
-# 	:param bind_pose_nodes: List of dag pose nodes, if None will use all in scene.
-# 	:return: List of joints connected to bind pose nodes.
-# 	"""
-# 	if not bind_pose_nodes:
-# 		bind_pose_nodes = pm.ls(type='dagPose')
-#
-# 	bind_jnts = []
-# 	for bind_pose in bind_pose_nodes:
-# 		bind_jnts = bind_jnts + bind_pose.worldMatrix.inputs()
-#
-# 	return bind_jnts
-# # end def getSkinnedJoints():
+def getBindJoints(skin_clusters=None):
+	"""
+	Get joints connected to a skin cluster.
+	:param skin_clusters: Pass a list of skin cluster PyNodes, if None will use all in scene.
+	:return: list of bind joints
+	"""
+	if not skin_clusters:
+		skin_clusters = pm.ls(type='skinCluster')
+
+	bind_jnts = set()
+	for skin_node in skin_clusters:
+		bind_jnts |= set(skin_node.matrix.inputs())
+
+	return list(bind_jnts)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -386,34 +385,15 @@ def setSceneToBindPose():
 	Sets the scene to bind pose.
 	:return: None
 	"""
-	rb_metadata = createRigBotMetadataNode()
+	bind_jnts = getBindJoints()
 
-	if pm.objExists('*.RB_MODULES'):
-		modules = pm.PyNode('*.RB_MODULES').node()
-		modules.template.set(l=0)
-		modules.template.set(1)
-
-	if rb_metadata.hasAttr('RB_BINDPOSE_METADATA'):
-		pm.dagPose(user.prefs['root-joint'], bindPose=True, restore=True)
-		return
-
-	skin_clusters = pm.ls(type='skinCluster')
-
-	bind_jnts = []
-	for skin_node in skin_clusters:
-		bind_jnts = bind_jnts + skin_node.matrix.inputs()
-
-	connection_data = []
+	input_nodes = set()
 	for jnt in bind_jnts:
-		jnt_inputs = jnt.inputs(c=True, p=True)
-		connection_data.append(map(lambda j: tuple(str(k) for k in j), jnt_inputs))
-		for connection in jnt_inputs:
-			connection[1] // connection[0]
+		input_nodes |= set(jnt.inputs())
 
-	pm.lockNode(rb_metadata, lock=False)
-	makeAttrFromDict(rb_metadata, {'name': 'RB_BINDPOSE_METADATA', 'dt': 'string'})
-	pm.setAttr('%s.RB_BINDPOSE_METADATA' % rb_metadata, str(connection_data), type='string', lock=True)
-	pm.lockNode(rb_metadata, lock=True)
+	# set nodes to blocking
+	for node in input_nodes:
+		node.nodeState.set(2)
 
 	pm.dagPose(bind_jnts, bindPose=True, restore=True)
 # end def setSceneToBindPose():
@@ -422,51 +402,30 @@ def setSceneToBindPose():
 # ----------------------------------------------------------------------------------------------------------------------
 def undoSetSceneToBindPose():
 	"""
-	Restores connections to joints connected to skin cluster.
+	Unblock nodes connected to bind joints, enabling constraints to work as normal.
 	:return: None
 	"""
-	rb_metadata = createRigBotMetadataNode()
-	if not rb_metadata.hasAttr('RB_BINDPOSE_METADATA'):
-		deleteRigBotMetadataNode()
-		raise UtilsException('--Missing Bind Pose Metadata info.')
+	bind_jnts = getBindJoints()
 
-	if pm.objExists('*.RB_MODULES'):
-		modules = pm.PyNode('*.RB_MODULES').node()
-		modules.template.set(l=0)
-		modules.template.set(0)
+	input_nodes = set()
+	for jnt in bind_jnts:
+		input_nodes |= set(jnt.inputs())
 
-	metadata = ast.literal_eval(rb_metadata.RB_BINDPOSE_METADATA.get())
-	for jnt_info in metadata:
-		if jnt_info:
-			for connection in jnt_info:
-				attr_out = pm.PyNode(connection[1])
-				attr_in = pm.PyNode(connection[0])
-				attr_out >> attr_in
-
-	pm.lockNode(rb_metadata, lock=False)
-	rb_metadata.RB_BINDPOSE_METADATA.set(l=False)
-	pm.deleteAttr('rigbot.RB_BINDPOSE_METADATA')
-	pm.lockNode(rb_metadata, lock=True)
-
-	deleteRigBotMetadataNode()
+	# set nodes to blocking
+	for node in input_nodes:
+		node.nodeState.set(0)
 # end def undoSetSceneToBindPose():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def resetBindPose(jnts, selected=False, skin_cluster=None):
+def resetBindPose(jnts, selected=False):
 	"""
 	Resets the bind pose as if the skin was bound to the skeleton as it exists now it world space.
 	:param jnts: List of joints to be reset. Use in conjunction with selected flag to get hierarchy.
 	:param selected: By default will include all children of given jnts unless this is set to True.
-	# TODO: this won't work because currently using pm.dagPose to reset bind pose, need to set bindPose manually.
-	:param skin_cluster: Specify which skin cluster to rest, by default resets all connected to jnts.
 	:return: None
 	"""
 	jnts = makePyNodeList(jnts)
-
-	rb_metadata = createRigBotMetadataNode()
-	if not rb_metadata.hasAttr('RB_BINDPOSE_METADATA'):
-		raise UtilsException('--Scene does not appear to be in bind pose.')
 
 	jnts_to_reset = set()
 	if selected:
@@ -479,14 +438,11 @@ def resetBindPose(jnts, selected=False, skin_cluster=None):
 	pm.dagPose(jnts_to_reset, bindPose=True, reset=True)
 
 	for jnt in jnts_to_reset:
-		skin_outputs = jnt.worldMatrix[0].outputs(p=True, type='skinCluster')
+		inv_world_mtx = jnt.worldInverseMatrix[0].get()
 
+		skin_outputs = jnt.worldMatrix[0].outputs(p=True, type='skinCluster')
 		for skin in skin_outputs:
-			if skin_cluster:
-				if not skin.node() == skin_cluster:
-					continue
 			joint_index = skin.index()
-			inv_world_mtx = jnt.worldInverseMatrix[0].get()
 
 			pre_mtx_attr = skin.node().attr('bindPreMatrix')
 
