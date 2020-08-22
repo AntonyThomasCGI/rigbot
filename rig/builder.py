@@ -240,6 +240,9 @@ def batchBuild(scaffolds=None):
 
 	print('>> Batch Build: Validating Scaffolds...')
 	# TODO: something more concrete than just checking moduleType exists here?
+	# TODO: potentially this should be implemented in in module classes as well eg;
+	# TODO: 		validateJointChain()
+	# TODO: 		if biped arm > 3 joints pass errors back, report, default to ' ' module type.
 
 	modules = []
 	for scaffold in scaffolds:
@@ -270,9 +273,7 @@ def batchBuild(scaffolds=None):
 	for module in modules:
 		module.postBuild()
 
-	print('>> Batch Build: Completed')
-
-	# TODO: would be cool to do some error logging/ warnings here at some point
+	print('>> Batch Build: Completed.')
 # end def batchBuild():
 
 

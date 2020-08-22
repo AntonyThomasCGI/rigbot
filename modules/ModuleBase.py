@@ -123,6 +123,7 @@ class ModuleBase(object):
 	def dismantle(self):
 		# deconstruct destroy, discombobulate.
 		# can hopefully figure out a nice way to make this work for every module.
+		# if containerized, decontainerize
 		pass
 	# end def dismantle():
 
@@ -137,5 +138,16 @@ class ModuleBase(object):
 	# ------------------------------------------------------------------------------------------------------------------
 	# 												utility functions
 	# ------------------------------------------------------------------------------------------------------------------
+	def makeGlobalSocket(self):
+		"""
+		Add rig world space socket to module input null for modules that need world space ctrls such as ik handles.
+		:return: PyNode attribute plug
+		"""
+		utils.makeAttrFromDict(self.modGlobals['modInput'], {'name': 'RB_World', 'at': 'matrix'})
+		rig_global_ctrl = pm.PyNode(user.prefs['root2-ctrl-name'])
 
+		rig_global_ctrl.worldMatrix[0] >> self.modGlobals['modInput'].RB_World
+
+		return self.modGlobals['modInput'].attribute('RB_World')
+	# end def makeGlobalSocket():
 # end class ModuleBase():
