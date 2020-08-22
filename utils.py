@@ -84,7 +84,7 @@ def setOverrideColour(colour, *args):
 # ----------------------------------------------------------------------------------------------------------------------
 def setOutlinerColour(colour, *args):
 	"""
-	Set node outliner colour
+	Set node outliner colour, uses linear colour value always as outliner applies no colour LUTs.
 
 	:param colour: colour to set outliner colour
 	:param args: nodes to apply change
@@ -135,54 +135,6 @@ def makePyNodeList(*args, **kwargs):
 
 	return objects
 # end def makePyNodeList():
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-def safeMakeChildGroups(path_ls, query=False):
-	"""
-	Make hierarchy of groups or get list of PyNodes if they already exist
-
-	:param path_ls: list of dag paths eg; ['Rig|joints', 'Rig|ctrls|etc.']
-	:param query: can run in query mode to return if groups exist
-	:return: list of PyNodes
-	"""
-
-	def permutatePath(node_path):
-		# node_path (string) = full dag path to be split into individual dag paths
-		split_ls = node_path.split('|')
-		path_ls = []
-		for i in range(len(split_ls)):
-			path_ls.append('|'.join(split_ls[slice(i+1)]))
-
-		return path_ls
-	# end permutatePath():
-
-	pynode_ls = []
-	node = None
-
-	for path in path_ls:
-		dag_path_ls = permutatePath(path)
-
-		for dag_path in dag_path_ls:
-
-			if pm.objExists(dag_path):
-				node = pm.PyNode(dag_path)
-
-			elif query:
-				return node
-
-			else:
-				split_dag = dag_path.split('|')
-				node = pm.group(n=split_dag[-1], em=True)
-				if len(split_dag) >= 2:
-					pm.parent(node, split_dag[-2])
-		pynode_ls.append(node)
-
-	if query:
-		return True
-	else:
-		return pynode_ls
-# end def safeMakeChildGroups():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -363,6 +315,8 @@ def cleanScaleCompensate(jnts):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# 											BIND POSE UTILITY FUNCTIONS
+# ----------------------------------------------------------------------------------------------------------------------
 def getBindJoints(skin_clusters=None):
 	"""
 	Get joints connected to a skin cluster.
@@ -449,6 +403,106 @@ def resetBindPose(jnts, selected=False):
 			jnt_pre_mtx = pre_mtx_attr.elementByLogicalIndex(joint_index)
 			jnt_pre_mtx.set(inv_world_mtx)
 # end def resetBindPose():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# 											MATRIX UTILITY FUNCTIONS
+# ----------------------------------------------------------------------------------------------------------------------
+
+def matrixConstraint(parent_node, *args, **kwargs):
+	"""
+	Constrain a parent node to a child node or list of children nodes.
+
+	:param parent_node:	(PyNode/string or PyNode attribute) Parent/constrainer node. Can not have more than one parent.
+						Will use node's worldMatrix by default. Anything else pass the specific attribute.
+
+	:param args:		Child or multiple children to be constrained.
+
+	:param kwargs:		>maintainOffset / mo:	Maintains offset between parent and child.
+												Default = True.
+						>skipTranslate / st: 	Possible arguments: 'xyz', will skip these channels.
+												Default applies constraint to all channels.
+						>skipRotate / sr:	 	Possible arguments: 'xyz', will skip these channels.
+												Default applies constraint to all channels.
+						>skipScale / ss:	 	Possible arguments: 'xyz', will skip these channels.
+												Default applies constraint to all channels.
+						>name / n:				Base name for nodes.
+												Default uses node name of parent_node
+	:return: None
+	"""
+	name = (kwargs.get('name', kwargs.get('n', parent_node.node())))
+
+	if isinstance(parent_node, basestring):
+		parent_node = pm.PyNode(parent_node)
+	if type(parent_node).__name__ == 'Attribute':
+		parent_matrix = parent_node
+	else:
+		parent_matrix = parent_node.attr('worldMatrix[0]')
+
+	children = makePyNodeList(args)
+	if not children:
+		raise UtilsException('--Failed to provide any valid child nodes to constrain.')
+
+	target_axis = []
+	for key_names in [('skipTranslate', 'st'), ('skipRotate', 'sr'), ('skipScale', 'ss')]:
+		exclude_axis = (kwargs.get(key_names[0], kwargs.get(key_names[1], '')))
+
+		target = 'xyz'
+		for axis in exclude_axis:
+			target = target.replace(axis, '')
+
+		target_axis.append(target)
+
+	def connectDecomposeToNodes(decompose_node, child_nodes):
+		"""
+		Finalizes the constraint with connections into the child node(s).
+		"""
+		for target_node in child_nodes:
+			for j, transform in enumerate(['translate', 'rotate', 'scale']):
+				for single_axis in target_axis[j]:
+					pm.connectAttr(
+						'{}.output{}{}'.format(decompose_node, transform.title(), single_axis.capitalize()),
+						'{}.{}{}'.format(target_node, transform, single_axis.capitalize())
+					)
+	# end connectDecomposeToNodes():
+
+	# if not maintaining offset, no complicated set up required, just connect worldMatrix to all children.
+	if not kwargs.get('maintainOffset', kwargs.get('mo', True)):
+		dcmp_m = pm.createNode('decomposeMatrix', n='{}_const_dcmpM'.format(name))
+		parent_matrix >> dcmp_m.inputMatrix
+		connectDecomposeToNodes(dcmp_m, children)
+		return
+
+	# Categorize the list of children into nested lists of children with the same world space.
+	children_categorized = []
+	matrix_tracker = []
+	for child in children:
+		this_world_matrix = child.worldMatrix[0].get()
+
+		if this_world_matrix in matrix_tracker:
+			# Current child matrix already exists, so append to the nested list of children.
+			child_index = matrix_tracker.index(this_world_matrix)
+			children_categorized[child_index].append(child)
+		else:
+			# Add new matrix to matrix_tracker and create a new nested list for children with the same matrix.
+			matrix_tracker.append(this_world_matrix)
+			children_categorized.append([child])
+
+	# Create matrix constraint node network for each nested child.
+	for i, nested_children in enumerate(children_categorized):
+		mult_m = pm.createNode('multMatrix', n='{}_{:02d}_const_multM'.format(name, i + 1))
+		offset_dcmp_m = pm.createNode('decomposeMatrix', n='{}_{:02d}_const_dcmpM'.format(name, i + 1))
+
+		# Can just get the local offset from first child in list as they should all have same world space.
+		child_matrix = nested_children[0].worldMatrix[0].get()
+		offset_matrix = child_matrix * parent_matrix.get().inverse()
+		mult_m.matrixIn[0].set(offset_matrix)
+
+		parent_matrix >> mult_m.matrixIn[1]
+		mult_m.matrixSum >> offset_dcmp_m.inputMatrix
+
+		connectDecomposeToNodes(offset_dcmp_m, nested_children)
+# end matrixConstraint():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -673,7 +727,8 @@ def initiateRig():
 
 		# turn off inherit unless we have ctrl
 		if not node.endswith('ctrl'):
-			node.inheritsTransform.set(0, lock=True)
+			if not node.inheritsTransform.get(l=True):
+				node.inheritsTransform.set(0, lock=True)
 
 		# joints should follow root2 ctrl
 		if item == user.prefs['root-joint']:
