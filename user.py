@@ -18,14 +18,14 @@ prefs = {
 	'root-joint'			: 'root_BIND',
 	'bind-skeleton-suffix'	: 'BIND',
 	'default-jnt-colour'	: 'grey-blue',
-	'module-root-colour'	: 'pale-orange',
+	'module-root-colour'	: 'light-orange',
 
 	'module-group-name'		: 'modules',
 
 	'root-ctrl-name'		: 'GOD',
 	'root2-ctrl-name'		: 'GOD_2',
 	'ctrl-suffix'			: 'ctrl',
-	'num-offset-ctrls'		: 1,
+	'num-offset-ctrls'		: 0,
 	'default-line-width'	: 2,
 
 	'left-prefix'			: 'L',

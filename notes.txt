@@ -8,8 +8,20 @@
 
 > for modules that don't output a matrix need some scripts to compose matrix out of joint connections + static offsets.
 
+> consistency in how you call util functions, matrixConstraint() good eg, lockHide bad eg
+	"""
+	Description goes here.
 
+	:param argument:	Description of specific arg.
+	
+	:param args:		Description of what args is.
+	
+	:param kwargs:		>longName / ln:		Description of kwarg.
+											Default = True.
+	:return: None
+	"""
 
+> ui has dev templates?
 
 
 

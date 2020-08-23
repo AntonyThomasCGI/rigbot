@@ -44,7 +44,7 @@ class control(object):
 
 			utils.setOverrideColour('purple', self.offsets)
 
-			utils.parentByList([self.ctrl, self.offsets, self.null])
+		utils.parentByList([self.ctrl, self.offsets, self.null])
 	# end def __init__():
 
 	@property

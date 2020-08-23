@@ -8,7 +8,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 import pymel.core as pm
-
+import math
 import os
 
 from . import user, data
@@ -406,6 +406,38 @@ def resetBindPose(jnts, selected=False):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+def positionUpVectorFromPoints(point_start, point_mid, point_end, magnitude=1.2):
+	"""
+	Gets xyz world co-ordinates for a projected point that sits on the plane of the specified points.
+	Useful for positioning pole vectors.
+	:param point_start:		3d co-ordinates for start vector.
+	:param point_mid:		3d co-ordinates for mid vector.
+	:param point_end:		3d co-ordinates for end vector.
+	:param magnitude:		Will project final vector by a scalar calculated from:
+							(mid - start) + (end - start) multiplied by this value.
+							Default = 1.2
+	:return: 3d vector.
+	"""
+	start_vect = pm.datatypes.Vector(point_start)
+	mid_vect = pm.datatypes.Vector(point_mid)
+	end_vect = pm.datatypes.Vector(point_end)
+
+	end_local_vect = end_vect - start_vect
+	mid_local_vect = mid_vect - start_vect
+
+	mid_vect_scalar = (end_local_vect * mid_local_vect) / (end_local_vect * end_local_vect)
+
+	projected_mid_vect = end_local_vect * mid_vect_scalar
+
+	mid_diff_vect = mid_local_vect - projected_mid_vect
+
+	scaled_pv_local_vect = mid_diff_vect * math.sqrt(sum(map(lambda x: x ** 2, end_local_vect))) * magnitude
+
+	return scaled_pv_local_vect + start_vect + projected_mid_vect
+# end def positionUpVectorFromPoints():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 # 											MATRIX UTILITY FUNCTIONS
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -418,7 +450,7 @@ def matrixConstraint(parent_node, *args, **kwargs):
 
 	:param args:		Child or multiple children to be constrained.
 
-	:param kwargs:		>maintainOffset / mo:	Maintains offset between parent and child.
+	:param kwargs:		>maintainOffset / mo:	Maintains the offset between parent and child.
 												Default = True.
 						>skipTranslate / st: 	Possible arguments: 'xyz', will skip these channels.
 												Default applies constraint to all channels.
@@ -427,31 +459,52 @@ def matrixConstraint(parent_node, *args, **kwargs):
 						>skipScale / ss:	 	Possible arguments: 'xyz', will skip these channels.
 												Default applies constraint to all channels.
 						>name / n:				Base name for nodes.
-												Default uses node name of parent_node
+												Default uses node name of parent_node.
+						>inverseParent / ip:	Add an additional connection to the mult matrix to counter a parent node.
+												If passed node will use worldInverseMatrix of the node.
+												If passed attribute will use that attribute.
+
 	:return: None
 	"""
-	name = (kwargs.get('name', kwargs.get('n', parent_node.node())))
+	# Get name
+	name = kwargs.pop('name', kwargs.pop('n', parent_node.node()))
 
+	# Get parent as attribute plug
 	if isinstance(parent_node, basestring):
 		parent_node = pm.PyNode(parent_node)
+
 	if type(parent_node).__name__ == 'Attribute':
 		parent_matrix = parent_node
 	else:
 		parent_matrix = parent_node.attr('worldMatrix[0]')
 
+	# If inverse parent specified get it as attribute plug
+	inverse_parent = kwargs.pop('inverseParent', kwargs.pop('ip', None))
+	if inverse_parent:
+		if not type(inverse_parent).__name__ == 'Attribute':
+			inverse_parent = inverse_parent.attr('worldInverseMatrix')
+
 	children = makePyNodeList(args)
 	if not children:
 		raise UtilsException('--Failed to provide any valid child nodes to constrain.')
 
+	# If maintain offset specified get it, else set to True by default.
+	maintain_offset = kwargs.pop('maintainOffset', kwargs.pop('mo', True))
+
 	target_axis = []
 	for key_names in [('skipTranslate', 'st'), ('skipRotate', 'sr'), ('skipScale', 'ss')]:
-		exclude_axis = (kwargs.get(key_names[0], kwargs.get(key_names[1], '')))
+		exclude_axis = (kwargs.pop(key_names[0], kwargs.pop(key_names[1], '')))
 
 		target = 'xyz'
 		for axis in exclude_axis:
 			target = target.replace(axis, '')
 
 		target_axis.append(target)
+
+	# At this point if there are still kwargs there shouldn't be so raise error.
+	if kwargs:
+		s = 's' if len(kwargs) > 1 else ''
+		raise TypeError('--Invalid flag{}: "{}"'.format(s, '", "'.join(kwargs.keys())))
 
 	def connectDecomposeToNodes(decompose_node, child_nodes):
 		"""
@@ -467,7 +520,7 @@ def matrixConstraint(parent_node, *args, **kwargs):
 	# end connectDecomposeToNodes():
 
 	# if not maintaining offset, no complicated set up required, just connect worldMatrix to all children.
-	if not kwargs.get('maintainOffset', kwargs.get('mo', True)):
+	if not maintain_offset:
 		dcmp_m = pm.createNode('decomposeMatrix', n='{}_const_dcmpM'.format(name))
 		parent_matrix >> dcmp_m.inputMatrix
 		connectDecomposeToNodes(dcmp_m, children)
@@ -496,9 +549,12 @@ def matrixConstraint(parent_node, *args, **kwargs):
 		# Can just get the local offset from first child in list as they should all have same world space.
 		child_matrix = nested_children[0].worldMatrix[0].get()
 		offset_matrix = child_matrix * parent_matrix.get().inverse()
-		mult_m.matrixIn[0].set(offset_matrix)
 
+		mult_m.matrixIn[0].set(offset_matrix)
 		parent_matrix >> mult_m.matrixIn[1]
+		if inverse_parent is not None:
+			inverse_parent >> mult_m.matrixIn[2]
+
 		mult_m.matrixSum >> offset_dcmp_m.inputMatrix
 
 		connectDecomposeToNodes(offset_dcmp_m, nested_children)
@@ -670,7 +726,7 @@ def initiateRig():
 					user.prefs['ctrl-suffix']
 				)
 				scaleCtrlShape(god2_ctrl, scale_mult=10.2, line_width=2)
-				setOverrideColour('pale-orange', god2_ctrl)
+				setOverrideColour('light-orange', god2_ctrl)
 
 				pm.parent(god2_ctrl, god_ctrl)
 
