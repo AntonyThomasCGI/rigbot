@@ -156,11 +156,11 @@ class Scaffold(object):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def makeScaffold(module_type=' ', length=1, name='untitled', socket='root', include_end=1):
+def makeScaffold(moduleType=' ', length=1, name='untitled', socket='root', includeEnd=1):
 	"""
 	Makes new scaffold for auto rigger to build from.
 
-	:param module_type: (string) Type of module chain will build into.
+	:param moduleType: (string) Type of module chain will build into.
 	:param length: (int) Joint chain length.
 	:param name: (string) Naming convention prefix.
 	:param socket: (PyNode or string) Parent for module.
@@ -215,8 +215,8 @@ def makeScaffold(module_type=' ', length=1, name='untitled', socket='root', incl
 	default_tags = [
 		{'name': 'RB_MODULE_ROOT', 'at': 'enum', 'en': ' ', 'k': 0, 'l': 1},
 		{'name': 'RB_module_type', 'k': 0, 'at': 'enum', 'en': (':'.join(all_modules)),
-			'dv': (all_modules.index(module_type))},
-		{'name': 'RB_include_end_joint', 'k': 0, 'at': 'bool', 'dv': include_end},
+			'dv': (all_modules.index(moduleType))},
+		{'name': 'RB_include_end_joint', 'k': 0, 'at': 'bool', 'dv': includeEnd},
 	]
 	for attr_dict in default_tags:
 		utils.makeAttrFromDict(chain[0], attr_dict)
@@ -247,7 +247,8 @@ def batchBuild(scaffolds=None):
 	modules = []
 	for scaffold in scaffolds:
 		if scaffold.moduleType in utils.getFilteredDir('modules'):
-			mod_class = getattr(mod, scaffold.moduleType)
+			mod_module = getattr(mod, scaffold.moduleType)
+			mod_class = getattr(mod_module, scaffold.moduleType)
 			modules.append(mod_class(scaffold))
 		elif scaffold.moduleType == ' ':
 			modules.append(mod.ModuleBase(scaffold))

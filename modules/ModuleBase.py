@@ -110,7 +110,10 @@ class ModuleBase(object):
 		# also swaps the BIND jnt connection to socket with module output
 		# can probably implement this once and every module uses it
 		root_shape = self.root.getShape()
-		pm.delete(root_shape)
+		if root_shape:
+			print('test')
+			pm.delete(root_shape)
+			print('test')
 		self.root.useOutlinerColor.set(0)
 		# for jnt in self.chain:
 		# 	jnt.overrideEnabled.set(0)
@@ -135,6 +138,11 @@ class ModuleBase(object):
 			return None
 	# end def root():
 
+	@property
+	def socketPlug(self):
+		return self.modGlobals['modInput'].attr('RB_Socket')
+	# end def socketPlug():
+
 	# ------------------------------------------------------------------------------------------------------------------
 	# 												utility functions
 	# ------------------------------------------------------------------------------------------------------------------
@@ -144,10 +152,10 @@ class ModuleBase(object):
 		:return: PyNode attribute plug
 		"""
 		utils.makeAttrFromDict(self.modGlobals['modInput'], {'name': 'RB_World', 'at': 'matrix'})
-		rig_global_ctrl = pm.PyNode(user.prefs['root2-ctrl-name'])
+		rig_global_ctrl = pm.PyNode('{}_{}'.format(user.prefs['root2-ctrl-name'], user.prefs['ctrl-suffix']))
 
 		rig_global_ctrl.worldMatrix[0] >> self.modGlobals['modInput'].RB_World
 
-		return self.modGlobals['modInput'].attribute('RB_World')
+		return self.modGlobals['modInput'].attr('RB_World')
 	# end def makeGlobalSocket():
 # end class ModuleBase():
