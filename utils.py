@@ -283,7 +283,7 @@ def parentByList(node_list):
 # ----------------------------------------------------------------------------------------------------------------------
 def cleanJointOrients(jnts):
 	"""
-	Copies joint orient values to rotation channel and resets the bind pose if joints are skinned.
+	Converts joint orient values to rotations only.
 	:param jnts: list of joints
 	:return: None
 	"""
