@@ -197,7 +197,7 @@ def makeScaffold(moduleType=' ', length=1, name='untitled', socket='root', inclu
 	pm.parent(chain[0], socket)
 
 	curv = pm.curve(d=1, p=data.controllerShapes['locator'], n=(name + '_display'))
-	utils.scaleCtrlShape(curv, scale_mult=0.5, line_width=3)
+	utils.scaleCtrlShapes(curv, scale_mult=0.5, line_width=3)
 
 	shape = curv.getChildren()[0]
 	pm.parent(shape, chain[0], r=True, s=True)

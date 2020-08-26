@@ -33,7 +33,7 @@ class control(object):
 
 		utils.setOverrideColour(colour, self.ctrl)
 
-		utils.scaleCtrlShape(self.ctrl, scale_mult=size, line_width=line_width)
+		utils.scaleCtrlShapes(self.ctrl, scale_mult=size, line_width=line_width)
 
 		self.null = pm.group(n=self.ctrl + '_null', em=True)
 

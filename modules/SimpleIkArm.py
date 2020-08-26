@@ -59,6 +59,7 @@ class SimpleIkArm(ModuleBase):
 		#TODO: if negative x axis, extra mdl before output_02_compM.inputTranslateX
 		#TODO: and also mdl -1 before output_03_fourM.30
 		#TODO: also * -1 on expr :thinking: maybe better way
+		#TODO: scream into pillow
 
 
 		stretchLimiter_clmp = pm.createNode('clamp', n='{}_stretchLimiter_clmp'.format(self.name))

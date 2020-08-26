@@ -192,7 +192,7 @@ def makeAttrFromDict(ob, attr_data):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def scaleCtrlShape(*args, **kwargs):
+def scaleCtrlShapes(*args, **kwargs):
 	"""
 	Scale ctrl shapes and set line width
 
@@ -224,7 +224,7 @@ def scaleCtrlShape(*args, **kwargs):
 					)
 				if line_width:
 					shape.lineWidth.set(line_width)
-# end def scaleCtrlShape():
+# end def scaleCtrlShapes():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -406,6 +406,7 @@ def resetBindPose(jnts, selected=False):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# TODO: use are length vector not local end vect
 def positionUpVectorFromPoints(point_start, point_mid, point_end, magnitude=1.2):
 	"""
 	Gets xyz world co-ordinates for a projected point that sits on the plane of the specified points.
@@ -600,7 +601,7 @@ def makeRoot():
 		root_jnt = pm.joint(n=user.prefs['root-joint'], radius=0.001)
 
 		ctrl = pm.curve(d=1, p=data.controllerShapes['locator'], n=(user.prefs['root-joint'] + '_display'))
-		scaleCtrlShape(ctrl, scale_mult=1.43, line_width=3)
+		scaleCtrlShapes(ctrl, scale_mult=1.43, line_width=3)
 
 		ctrl_shape = ctrl.getChildren()[0]
 		setOverrideColour(user.prefs['module-root-colour'], [root_jnt, ctrl_shape])
@@ -716,7 +717,7 @@ def initiateRig():
 				god_ctrl = pm.circle(n=(component + '_' + user.prefs['ctrl-suffix']), nry=1, nrz=0, ch=False)[0]
 
 				setOverrideColour('grey', god_ctrl)
-				scaleCtrlShape(god_ctrl, scale_mult=45, line_width=-1)
+				scaleCtrlShapes(god_ctrl, scale_mult=45, line_width=-1)
 				for axis in ['X', 'Z']:
 					pm.connectAttr('{}.scaleY'.format(god_ctrl), '{}.scale{}'.format(god_ctrl, axis))
 					pm.setAttr('{}.scale{}'.format(god_ctrl, axis), lock=True)
@@ -725,7 +726,7 @@ def initiateRig():
 					d=1, p=data.controllerShapes['omni-circle'], n=user.prefs['root2-ctrl-name'] + '_' +
 					user.prefs['ctrl-suffix']
 				)
-				scaleCtrlShape(god2_ctrl, scale_mult=10.2, line_width=2)
+				scaleCtrlShapes(god2_ctrl, scale_mult=10.2, line_width=2)
 				setOverrideColour('light-orange', god2_ctrl)
 
 				pm.parent(god2_ctrl, god_ctrl)
