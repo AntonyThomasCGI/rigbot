@@ -315,6 +315,48 @@ def cleanScaleCompensate(jnts):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+def roundRotation(nodes, round_val=90):
+	"""
+	Rounds rotation to nearest multiple of given value
+	:param nodes:  Transform nodes to round rotation value.
+	:param round_val:  Value to round to.
+	:return:  None
+	"""
+	nodes = makePyNodeList(nodes)
+
+	for node in nodes:
+		if node.rotate.get(settable=True):
+			for rotAxis in node.rotate.iterDescendants():
+				rotAxis.set(round(rotAxis.get() / round_val) * round_val)
+# end def roundRotation():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+def iterDgNodes(root, up_stream=False, down_stream=False, end=None):
+	"""
+	Simplified version of MItDependencyGraph from api.
+	:param root:  `PyNode` None to start iteration from.
+	:param up_stream:  `bool` Traverse the graph upstream.
+	:param down_stream:  `bool` Traverse the graph downstream.
+	:param end:  `PyNode` Don't iterate past this node.
+	:yield:  Pynode
+	"""
+	dirty = []
+	stack = root.listConnections(source=up_stream, destination=down_stream)
+
+	while stack:
+		this_node = stack.pop()
+		if this_node in dirty or this_node == end:
+			continue
+		dirty.append(this_node)
+
+		stack = stack + this_node.listConnections(source=up_stream, destination=down_stream)
+
+		yield this_node
+# end def iterDgNodes():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 # 											BIND POSE UTILITY FUNCTIONS
 # ----------------------------------------------------------------------------------------------------------------------
 def getBindJoints(skin_clusters=None):
@@ -637,28 +679,23 @@ def getModuleChildren(modroot):
 
 	flattened_jnts = root_jnt.getChildren(ad=True, type='joint')
 
-	def isModRoot(jnt):
-		return jnt.hasAttr('RB_MODULE_ROOT')
-	# end def isModRoot():
-
-	module_roots = filter(isModRoot, flattened_jnts)
-	short_mod_roots = map(lambda mod_r: mod_r.shortName(), module_roots)
+	module_roots = filter(lambda jnt: jnt.hasAttr('RB_MODULE_ROOT'), flattened_jnts)
+	short_mod_roots = map(lambda mod_r: mod_r.nodeName(), module_roots)
 
 	modname = modroot.shortName()
 
 	def filterChildren(jnt):
-
-		path_dict = {k: v for k, v in enumerate(jnt.fullPath().split('|'))}
+		flat_hierarchy = jnt.fullPath().split('|')
 
 		mod_index = 0
 		other_mod_index = []
-		for n, node in path_dict.items():
-			if modname == node:
-				mod_index = n
+		for parent in flat_hierarchy:
+			if modname == parent:
+				mod_index = flat_hierarchy.index(parent)
 			else:
 				for s_modr in short_mod_roots:
-					if s_modr == node:
-						other_mod_index.append(n)
+					if s_modr == parent:
+						other_mod_index.append(flat_hierarchy.index(parent))
 
 		if not other_mod_index:
 			return True
@@ -689,7 +726,7 @@ def makeNameUnique(name, suffix='_*'):
 
 	new_name = name
 	i = 1
-	while pm.objExists(new_name+'%s' % suffix):
+	while pm.objExists(new_name + suffix):
 		new_name = '{}{}'.format(name, i)
 		i += 1
 
@@ -722,10 +759,12 @@ def initiateRig():
 					pm.connectAttr('{}.scaleY'.format(god_ctrl), '{}.scale{}'.format(god_ctrl, axis))
 					pm.setAttr('{}.scale{}'.format(god_ctrl, axis), lock=True)
 
-				god2_ctrl = pm.curve(
-					d=1, p=data.controllerShapes['omni-circle'], n=user.prefs['root2-ctrl-name'] + '_' +
-					user.prefs['ctrl-suffix']
-				)
+				god2_ctrl = \
+					pm.curve(
+						d=1,
+						p=data.controllerShapes['omni-circle'],
+						n=user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
+
 				scaleCtrlShapes(god2_ctrl, scale_mult=10.2, line_width=2)
 				setOverrideColour('light-orange', god2_ctrl)
 
@@ -832,3 +871,31 @@ def deleteRigBotMetadataNode():
 		pm.lockNode(rb_node, lock=False)
 		pm.delete(rb_node)
 # end def deleteRigBotMetadataNode():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+def getModuleNodes(module_grp):
+	"""
+	Get all nodes associated with a module.  Requires correct module group structure.
+	:param module_grp:  `PyNode` Root group of module.
+	:return:  Set of all module PyNodes.
+	"""
+	module_dag = module_grp.getChildren(ad=True)
+
+	input = next((x for x in module_dag if x.endswith('input')), None)
+	output = next((y for y in module_dag if y.endswith('output')), None)
+
+	if input is None or output is None:
+		raise TypeError('--Failed to find input and/or ouput nodes in hierarchy.')
+
+	module_nodes = {module_grp}
+	module_nodes |= set([x for x in iterDgNodes(input, down_stream=True, end=output)])
+	module_nodes |= set([x for x in iterDgNodes(output, up_stream=True, end=input)])
+
+	for this_dag in module_dag:
+		if this_dag in module_nodes:
+			continue
+		module_nodes.add(this_dag)
+
+	return module_nodes
+# end getModuleNodes():

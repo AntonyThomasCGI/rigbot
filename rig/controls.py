@@ -13,7 +13,6 @@ from .. import utils, user, data
 
 
 # TODO: L / R auto colouring
-# TODO: override delete python method to clean all the offsets/null ??
 # TODO: support for multiple shapes, shape = ['list', 'of', 'shapes']
 class control(object):
 	def __init__(
@@ -28,8 +27,13 @@ class control(object):
 		:param offsets: amount of offset locators to make
 		"""
 
-		name = utils.makeNameUnique(name, '_%s' % user.prefs['ctrl-suffix'])
-		self.ctrl = pm.curve(d=1, p=data.controllerShapes[shape], n=(name + '_' + user.prefs['ctrl-suffix']))
+		self.name = utils.makeNameUnique(name, '_%s' % user.prefs['ctrl-suffix'])
+
+		self.ctrl = \
+			pm.curve(
+				d=1,
+				p=data.controllerShapes[shape],
+				n=(self.name + '_' + user.prefs['ctrl-suffix']))
 
 		utils.setOverrideColour(colour, self.ctrl)
 

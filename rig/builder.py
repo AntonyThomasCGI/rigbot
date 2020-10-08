@@ -246,6 +246,7 @@ def batchBuild(scaffolds=None):
 
 	modules = []
 	for scaffold in scaffolds:
+		print scaffold
 		if scaffold.moduleType in utils.getFilteredDir('modules'):
 			mod_module = getattr(mod, scaffold.moduleType)
 			mod_class = getattr(mod_module, scaffold.moduleType)
@@ -273,6 +274,10 @@ def batchBuild(scaffolds=None):
 	print('>> Batch Build: Post Building...')
 	for module in modules:
 		module.postBuild()
+
+	print('>> Batch Build: Encapsulating...')
+	for module in modules:
+		module.encapsulate()
 
 	print('>> Batch Build: Completed.')
 # end def batchBuild():

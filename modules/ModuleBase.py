@@ -34,7 +34,7 @@ class ModuleBase(object):
 
 		# get rig globals
 		if pm.objExists(user.prefs['module-group-name']):
-			self.moduleGrp = pm.PyNode(user.prefs['module-group-name'])
+			self.rigModuleGrp = pm.PyNode(user.prefs['module-group-name'])
 		else:
 			raise ModuleBaseException('--Rig has not been initiated. try use utils.initiateRig().')
 
@@ -68,14 +68,14 @@ class ModuleBase(object):
 		self.modGlobals['transformGrp'] = pm.group(n=self.name + '_transform', em=True)
 		self.modGlobals['noTransformGrp'] = pm.group(n=self.name + '_noTransform', em=True)
 
-		mod_grp = pm.group(
+		self.modGlobals['modRoot'] = pm.group(
 			self.modGlobals['modInput'], self.modGlobals['modOutput'], self.modGlobals['modCtrls'], n=self.name + '_mod'
 		)
 		rig_dag_grp = pm.group(
 			self.modGlobals['transformGrp'], self.modGlobals['noTransformGrp'], n=self.name + '_rigDag'
 		)
-		pm.parent(rig_dag_grp, mod_grp)
-		pm.parent(mod_grp, self.moduleGrp)
+		pm.parent(rig_dag_grp, self.modGlobals['modRoot'])
+		pm.parent(self.modGlobals['modRoot'], self.rigModuleGrp)
 
 		# make connections
 		utils.makeAttrFromDict(self.modGlobals['modInput'], {'name': 'RB_Socket', 'at': 'matrix'})
@@ -111,22 +111,30 @@ class ModuleBase(object):
 		# can probably implement this once and every module uses it
 		root_shape = self.root.getShape()
 		if root_shape:
-			print('test')
 			pm.delete(root_shape)
-			print('test')
 		self.root.useOutlinerColor.set(0)
 		# for jnt in self.chain:
 		# 	jnt.overrideEnabled.set(0)
 	# end def postBuild():
 
-	def containerize(self):
-		# can hopefully implement this once, similar to dismantle(), just get every node connected to module
-		pass
+	# ------------------------------------------------------------------------------------------------------------------
+	def encapsulate(self):
+		contain = pm.createNode('container', name=self.name)
 
+		contain.addNode(utils.getModuleNodes(self.modGlobals['modRoot']))
+
+		for i, c in enumerate(self.controllers):
+			publish_plug = contain.attr('publishedNodeInfo')
+			this_publish = publish_plug.elementByLogicalIndex(i+1)
+
+			c.ctrl.message >> this_publish.publishedNode
+
+	# ------------------------------------------------------------------------------------------------------------------
 	def dismantle(self):
-		# deconstruct destroy, discombobulate.
+		# deconstruct destroy, discombobulate, derig, delete.
 		# can hopefully figure out a nice way to make this work for every module.
 		# if containerized, decontainerize
+		# uhh should this just be function somewhere.. hard to remake this class maybe?
 		pass
 	# end def dismantle():
 
