@@ -659,6 +659,29 @@ def makeRoot():
 		for tag in tags:
 			makeAttrFromDict(root_jnt, tag)
 
+		cog_place = pm.createNode('joint', n='cog_placement')
+
+		cog_place.drawStyle.set(1)
+		cog_place.radius.set(0.001)
+		setOverrideColour('pink', cog_place)
+		setOutlinerColour('pink', cog_place)
+
+		display = [pm.createNode('joint', n='cog_display_{:02d}'.format(i)) for i in range(2)]
+
+		display[0].translate.set([1.5, 1.5, 1.5])
+		display[1].translate.set([-1.5, -1.5, -1.5])
+
+		for jnt in display:
+			jnt.radius.set(0.01)
+			jnt.setParent(cog_place)
+			jnt.visibility.set(0)
+			jnt.hiddenInOutliner.set(1)
+
+		cog_place.setParent(root_jnt)
+		cleanScaleCompensate(display)
+		cleanScaleCompensate(cog_place)
+		lockHide({'r': 1, 's': 'xy', 't': 'z', 'v': 1}, *display)
+
 	return root_jnt
 # end def makeRoot():
 
