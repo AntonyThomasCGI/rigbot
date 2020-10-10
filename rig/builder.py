@@ -22,7 +22,7 @@ class ScaffoldException(Exception):
 class Scaffold(object):
 
 	# Specify what modules can build from this scaffold
-	_availableModules = utils.getFilteredDir('modules')
+	_availableModules = utils.getFilteredDir('modules', ignore_private=False)
 	_availableModules.append(' ')
 
 	# ------------------------------------------------------------------------------------------------------------------
@@ -41,10 +41,18 @@ class Scaffold(object):
 		if self._moduleType not in self._availableModules:
 			raise ScaffoldException('Module type: {} is not in list of available modules.'.format(self._moduleType))
 
-		self._includeEndJoint = module_root.getAttr('RB_include_end_joint')
+		if module_root.hasAttr('RB_include_end_joint'):
+			self._includeEndJoint = module_root.getAttr('RB_include_end_joint')
+		else:
+			self._includeEndJoint = 1
+
 		self._name = self.getModName(module_root)
 		self._length = set()
-		self.socket = module_root.listRelatives(parent=True)[0]
+
+		if not self.moduleType == '_Root':
+			self.socket = module_root.listRelatives(parent=True)[0]
+		else:
+			self.socket = None
 	# end def __init__():
 
 	def __str__(self):
@@ -54,6 +62,16 @@ class Scaffold(object):
 	def __repr__(self):
 		return self.__str__()
 	# end def __repr__():
+
+	def __eq__(self, other):
+		if isinstance(other, Scaffold):
+			return self.moduleType == other.moduleType
+		return False
+	# end def __eq__():
+
+	def __ne__(self, other):
+		return not self.__eq__(other)
+	# end def __ne__():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	#  													properties
@@ -233,10 +251,20 @@ def batchBuild(scaffolds=None):
 	:param modules: list of scaffold objects to rig, if not specified attempts to batch rig every module in scene.
 	:return: None
 	"""
-	utils.initiateRig()
-
 	if not scaffolds:
 		scaffolds = getModules()
+
+	root = next((s for s in scaffolds if s.moduleType == '_Root'), None)
+	if root is not None:
+		scaffolds.pop(scaffolds.index(root))
+		root_module = getattr(mod, root.moduleType)
+		root_class = getattr(root_module, root.moduleType)
+		root_instance = root_class(root)
+		root_instance.registerModule()
+		root_instance.preBuild()
+		root_instance.build()
+		root_instance.postBuild()
+		root_instance.encapsulate()
 
 	print('>> Batch Build: Validating Scaffolds...')
 	# TODO: something more concrete than just checking moduleType exists here?
@@ -246,8 +274,7 @@ def batchBuild(scaffolds=None):
 
 	modules = []
 	for scaffold in scaffolds:
-		print scaffold
-		if scaffold.moduleType in utils.getFilteredDir('modules'):
+		if scaffold.moduleType in utils.getFilteredDir('modules', ignore_private=False):
 			mod_module = getattr(mod, scaffold.moduleType)
 			mod_class = getattr(mod_module, scaffold.moduleType)
 			modules.append(mod_class(scaffold))
@@ -298,6 +325,7 @@ def getModules():
 		return []
 
 	flattened_jnts = root_jnt.getChildren(ad=True, type='joint')
+	flattened_jnts.append(root_jnt)
 
 	def isModRoot(jnt):
 		return jnt.hasAttr('RB_MODULE_ROOT')
