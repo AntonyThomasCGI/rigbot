@@ -608,11 +608,12 @@ def matrixConstraint(parent_node, *args, **kwargs):
 # 											RIG BOT UTILITY FUNCTIONS
 # ----------------------------------------------------------------------------------------------------------------------
 
-def getFilteredDir(folder):
+def getFilteredDir(folder, ignore_private=True):
 	"""
 	Return list of files in give folder
 
-	:param folder: string name of folder within rigbot dir
+	:param folder: `string` name of folder within rigbot dir
+	:param ignore_private: `bool` ignore private modules unless specified not to.
 	:return: string name of python files that are not __init__ or end with Base.py
 	"""
 
@@ -623,6 +624,7 @@ def getFilteredDir(folder):
 		if x.endswith('.py')
 		and not x.count('__init__')
 		and not x.endswith('Base.py')
+		and not (x.startswith('_') if ignore_private else 0)
 	]
 
 	return files
@@ -632,7 +634,7 @@ def getFilteredDir(folder):
 # ----------------------------------------------------------------------------------------------------------------------
 def makeRoot():
 	"""
-	Returns pynode of root joint or creates new one if none exists
+	Returns pynode of root joint or creates new one if none exists.  Also creates cog placement joint.
 
 	:return: root joint
 	"""
@@ -654,7 +656,7 @@ def makeRoot():
 
 		tags = [
 			{'name': 'RB_MODULE_ROOT', 'at': 'enum', 'en': ' ', 'k': 0, 'l': 1},
-			{'name': 'RB_module_type', 'k': 0, 'at': 'enum', 'en': 'root'},
+			{'name': 'RB_module_type', 'k': 0, 'at': 'enum', 'en': '_Root'},
 		]
 		for tag in tags:
 			makeAttrFromDict(root_jnt, tag)
@@ -755,111 +757,6 @@ def makeNameUnique(name, suffix='_*'):
 
 	return new_name
 # end makeNameUnique():
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-def initiateRig():
-	"""
-	Creates default rig hierarchy that modules rely on
-	:return: dict of global groups and ctrls
-	"""
-
-	rig_dict = {}
-
-	def safeMakeNode(component, socket):
-
-		if component == user.prefs['root-ctrl-name']:
-			if pm.objExists(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix']):
-				god_ctrl = pm.PyNode(user.prefs['root-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
-				god2_ctrl = pm.PyNode(user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
-
-			else:
-				god_ctrl = pm.circle(n=(component + '_' + user.prefs['ctrl-suffix']), nry=1, nrz=0, ch=False)[0]
-
-				setOverrideColour('grey', god_ctrl)
-				scaleCtrlShapes(god_ctrl, scale_mult=45, line_width=-1)
-				for axis in ['X', 'Z']:
-					pm.connectAttr('{}.scaleY'.format(god_ctrl), '{}.scale{}'.format(god_ctrl, axis))
-					pm.setAttr('{}.scale{}'.format(god_ctrl, axis), lock=True)
-
-				god2_ctrl = \
-					pm.curve(
-						d=1,
-						p=data.controllerShapes['omni-circle'],
-						n=user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
-
-				scaleCtrlShapes(god2_ctrl, scale_mult=10.2, line_width=2)
-				setOverrideColour('light-orange', god2_ctrl)
-
-				pm.parent(god2_ctrl, god_ctrl)
-
-			rig_dict[component] = god_ctrl
-			rig_dict['root2-ctrl-name'] = god2_ctrl
-
-			if socket != 'World':
-				pm.parent(god_ctrl, socket)
-
-			return god_ctrl
-		# component must be group at this point
-		else:
-			if pm.objExists(component):
-				grp = pm.PyNode(component)
-			else:
-				grp = pm.group(n=component, em=True)
-				if component == user.prefs['module-group-name']:
-					makeAttrFromDict(grp, {'name': 'RB_MODULES', 'at': 'enum', 'en': ' ', 'l': 1})
-
-			rig_dict[component] = grp
-
-			if socket != 'World':
-				pm.parent(grp, socket)
-			return grp
-	# end def safeMakeNode():
-
-	def walkTreeWithParent(tree, socket='World'):
-
-		socket = safeMakeNode(tree.component, socket)
-
-		if not tree.children:
-			return
-
-		for child in tree.children:
-			walkTreeWithParent(child, socket)
-	# end def walkTreeWithParent():
-
-	walkTreeWithParent(user.RigTree)
-
-	root2_world_outputs = rig_dict['root2-ctrl-name'].worldMatrix[0].outputs()
-
-	root2_dcmp = None
-	# !FIXME: this errors if decompose Matrix plugin not loaded??
-	if 'decomposeMatrix' not in map(lambda x: x.nodeType(), root2_world_outputs):
-		root2_dcmp = pm.createNode('decomposeMatrix', n=rig_dict['root2-ctrl-name'] + '_dcmpM')
-		rig_dict['root2-ctrl-name'].worldMatrix[0] >> root2_dcmp.inputMatrix
-	else:
-		for node in root2_world_outputs:
-			if node.nodeType() == 'decomposeMatrix':
-				root2_dcmp = node
-
-	# make connections
-	for item, node in rig_dict.items():
-
-		# turn off inherit unless we have ctrl
-		if not node.endswith('ctrl'):
-			if not node.inheritsTransform.get(l=True):
-				node.inheritsTransform.set(0, lock=True)
-
-		# joints should follow root2 ctrl
-		if item == user.prefs['root-joint']:
-			root2_dcmp.outputTranslate >> node.translate
-			root2_dcmp.outputRotate >> node.rotate
-			root2_dcmp.outputScale >> node.scale
-			root_shape = node.getShape()
-			pm.delete(root_shape)
-			node.useOutlinerColor.set(0)
-
-	return rig_dict
-# end def initiateRig():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
