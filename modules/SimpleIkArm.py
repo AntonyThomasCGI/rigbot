@@ -253,8 +253,6 @@ class SimpleIkArm(ModuleBase):
 		self.controllers[2].ctrl.worldMatrix[0] >> localRot_03_multM.matrixIn[0]
 		rot_inv_trnpM.outputMatrix >> localRot_03_multM.matrixIn[1]
 		localRot_03_multM.matrixSum >> yVec_vecMtxProd.matrix
-		localVec_pma.output3D >> base_aim_yVec_crsP.input1
-		pv_localVec_pma.output3D >> base_aim_yVec_crsP.input2
 		shoulder_angle_acos.output >> ik_rotations_compM.inputRotateY
 		pv_ctrl_dcmpM.outputTranslate >> pv_localVec_pma.input3D[0]
 		base_ctrl_dcmpM.outputTranslate >> pv_localVec_pma.input3D[1]

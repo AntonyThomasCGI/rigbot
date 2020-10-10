@@ -34,7 +34,7 @@ class SimpleFk(ModuleBase):
 
 	def build(self):
 
-		#TODO: this set up pretty scuffed, just get null offset and drive matrix of joint not world and inv wrld
+		# TODO: this set up pretty scuffed, just get null offset and drive matrix of joint not world and inv wrld
 		for i, this_ctrl in enumerate(self.controllers):
 			matrix_out = utils.makeAttrFromDict(
 				self.modGlobals['modOutput'], {'name': '%s_out' % this_ctrl.ctrl, 'dt': 'matrix'}

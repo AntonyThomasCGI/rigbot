@@ -36,7 +36,7 @@ class ModuleBase(object):
 		if pm.objExists(user.prefs['module-group-name']):
 			self.rigModuleGrp = pm.PyNode(user.prefs['module-group-name'])
 		else:
-			raise ModuleBaseException('--Rig has not been initiated. try use utils.initiateRig().')
+			self.rigModuleGrp = None
 
 		# module globals
 		self.modGlobals = {}
@@ -61,6 +61,7 @@ class ModuleBase(object):
 	# end def __len__():
 
 	def registerModule(self):
+		# TODO: output null matrix per joint created here?
 		# make null hierarchy
 		self.modGlobals['modInput'] = pm.group(n=self.name + '_input', em=True)
 		self.modGlobals['modOutput'] = pm.group(n=self.name + '_output', em=True)
