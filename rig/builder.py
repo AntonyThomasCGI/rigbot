@@ -185,6 +185,8 @@ def makeScaffold(moduleType=' ', length=1, name='untitled', socket='root', inclu
 	:param include_end: (bool) If auto rigger should generate controllers on end joint.
 	:return: scaffold class object
 	"""
+	if moduleType not in utils.getFilteredDir('modules') and moduleType != ' ':
+		raise TypeError('--Module type is invalid or not yet implemented.')
 
 	chain = utils.makeJointChain(length, name, user.prefs['bind-skeleton-suffix'])
 
