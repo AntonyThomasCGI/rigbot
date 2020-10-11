@@ -24,6 +24,8 @@ prefs = {
 
 	'root-ctrl-name'		: 'GOD',
 	'root2-ctrl-name'		: 'GOD_2',
+	'cog-ctrl-name'			: 'cog',
+	'pivot-ctrl-name'		: 'cog_pivot',
 	'ctrl-suffix'			: 'ctrl',
 	'num-offset-ctrls'		: 0,
 	'default-line-width'	: 2,
