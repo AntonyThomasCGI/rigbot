@@ -42,7 +42,7 @@ class ModuleBase(object):
 		self.modGlobals = {}
 
 		# module attributes
-		self.controllers = []
+		self.controllers = {}
 	# end def __init__():
 
 	def __str__(self):
@@ -78,9 +78,19 @@ class ModuleBase(object):
 		pm.parent(rig_dag_grp, self.modGlobals['modRoot'])
 		pm.parent(self.modGlobals['modRoot'], self.rigModuleGrp)
 
+		utils.makeAttrFromDict(self.modGlobals['modOutput'], {'name': 'RB_Output', 'at': 'matrix', 'multi': True})
+
 		# make connections
 		utils.makeAttrFromDict(self.modGlobals['modInput'], {'name': 'RB_Socket', 'at': 'matrix'})
-		self.socket.worldMatrix[0] >> self.modGlobals['modInput'].RB_Socket
+
+		if self.socket.shortName() == user.prefs['root-joint']:
+			pivot_name = '{}_{}'.format(user.prefs['pivot-ctrl-name'], user.prefs['ctrl-suffix'])
+			if pm.objExists(pivot_name):
+				pm.PyNode(pivot_name).worldMatrix[0] >> self.modGlobals['modInput'].RB_Socket
+			else:
+				raise ModuleBaseException('--Pivot ctrl does not exist: {}'.format(pivot_name))
+		else:
+			self.socket.worldMatrix[0] >> self.modGlobals['modInput'].RB_Socket
 
 		self.socketDcmp = pm.createNode('decomposeMatrix', n=self.name + '_socket_dcmpM')
 		self.modGlobals['modInput'].RB_Socket >> self.socketDcmp.inputMatrix
@@ -114,8 +124,18 @@ class ModuleBase(object):
 		if root_shape:
 			pm.delete(root_shape)
 		self.root.useOutlinerColor.set(0)
-		# for jnt in self.chain:
-		# 	jnt.overrideEnabled.set(0)
+
+		for i, jnt in enumerate(self.chain):
+			multm = pm.createNode('multMatrix', n='{}_out_multM'.format(jnt))
+			dcmp = pm.createNode('decomposeMatrix', n='{}_out_dcmpM'.format(jnt))
+
+			self.outputPlug[i] >> multm.matrixIn[0]
+			jnt.parentInverseMatrix >> multm.matrixIn[1]
+			multm.matrixSum >> dcmp.inputMatrix
+
+			dcmp.outputTranslate >> jnt.translate
+			dcmp.outputRotate >> jnt.rotate
+			# TODO: maybe, scale connection could be class global variable possible _connect_scale = False
 	# end def postBuild():
 
 	# ------------------------------------------------------------------------------------------------------------------
@@ -124,11 +144,21 @@ class ModuleBase(object):
 
 		contain.addNode(utils.getModuleNodes(self.modGlobals['modRoot']))
 
-		for i, c in enumerate(self.controllers):
+		publish_count = 1
+		for c in self.controllers.values():
 			publish_plug = contain.attr('publishedNodeInfo')
-			this_publish = publish_plug.elementByLogicalIndex(i+1)
+			this_publish = publish_plug.elementByLogicalIndex(publish_count)
 
 			c.ctrl.message >> this_publish.publishedNode
+
+			publish_count += 1
+
+			for o in c.offsets:  # publish ctrl offsets if any
+				this_offset_publish = publish_plug.elementByLogicalIndex(publish_count)
+
+				o.message >> this_offset_publish.publishedNode
+
+				publish_count += 1
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def dismantle(self):
@@ -152,6 +182,19 @@ class ModuleBase(object):
 		return self.modGlobals['modInput'].attr('RB_Socket')
 	# end def socketPlug():
 
+	@property
+	def outputPlug(self):
+		return self.modGlobals['modOutput'].attr('RB_Output')
+	# end def outputPlug():
+
+	@property
+	def globalPlug(self):
+		if self.modGlobals['modInput'].hasAttr('RB_World'):
+			return self.modGlobals['modInput'].attr('RB_World')
+		else:
+			return None
+	# end def globalPlug():
+
 	# ------------------------------------------------------------------------------------------------------------------
 	# 												utility functions
 	# ------------------------------------------------------------------------------------------------------------------
@@ -165,6 +208,6 @@ class ModuleBase(object):
 
 		rig_global_ctrl.worldMatrix[0] >> self.modGlobals['modInput'].RB_World
 
-		return self.modGlobals['modInput'].attr('RB_World')
+		return self.globalPlug
 	# end def makeGlobalSocket():
 # end class ModuleBase():

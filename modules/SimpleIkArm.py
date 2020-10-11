@@ -16,6 +16,7 @@ import pymel.core as pm
 
 
 class SimpleIkArm(ModuleBase):
+
 	def __init__(self, *args):
 		super(SimpleIkArm, self).__init__(*args)
 	#  end def __init__():
@@ -23,14 +24,29 @@ class SimpleIkArm(ModuleBase):
 	def preBuild(self):
 		super(SimpleIkArm, self).preBuild()
 
-		global_socket = self.makeGlobalSocket()
+		self.makeGlobalSocket()
 
-		base_ctrl = ctrl.control(name='%s_base' % self.name, shape='square', colour='dark-cyan', size=1.2)
-		ik_ctrl = ctrl.control(name='%s_ik' % self.name, shape='cube', colour='light-orange')
-		pv_ctrl = ctrl.control(name='%s_pv' % self.name, shape='winged-pole', colour='cyan', size=0.5)
+		self.controllers['base_ctrl'] = \
+			ctrl.control(
+				name='%s_base' % self.name,
+				shape='square',
+				colour='dark-cyan',
+				size=1.2)
 
-		self.controllers = [base_ctrl, pv_ctrl, ik_ctrl]
-		for ctrl_item in self.controllers:
+		self.controllers['ik_ctrl'] = \
+			ctrl.control(
+				name='%s_ik' % self.name,
+				shape='cube',
+				colour='light-orange')
+
+		self.controllers['pv_ctrl'] = \
+			ctrl.control(
+				name='%s_pv' % self.name,
+				shape='winged-pole',
+				colour='cyan',
+				size=0.5)
+
+		for ctrl_item in self.controllers.values():
 			pm.parent(ctrl_item.null, self.modGlobals['modCtrls'])
 
 		ik_ctrl_param = [
@@ -39,23 +55,28 @@ class SimpleIkArm(ModuleBase):
 			{'name': 'stretch', 'at': 'bool'},
 		]
 		for param in ik_ctrl_param:
-			utils.makeAttrFromDict(ik_ctrl.ctrl, param)
+			utils.makeAttrFromDict(self.controllers['ik_ctrl'].ctrl, param)
 
-		pm.matchTransform(base_ctrl.null, self.chain[0])
-		pm.matchTransform(ik_ctrl.null, self.chain[-1])
+		pm.matchTransform(self.controllers['base_ctrl'].null, self.chain[0])
+		pm.matchTransform(self.controllers['ik_ctrl'].null, self.chain[-1])
 
 		joint_vectors = map(lambda x: pm.xform(x, q=True, t=True, ws=True), self.chain)
 
 		pole_vector_position = utils.positionUpVectorFromPoints(*joint_vectors)
 
-		pm.xform(pv_ctrl.null, t=pole_vector_position, ws=True)
+		pm.xform(self.controllers['pv_ctrl'].null, t=pole_vector_position, ws=True)
 
 		# TODO: space switches not constraints.
-		utils.matrixConstraint(global_socket, ik_ctrl.null, pv_ctrl.null, ss='xyz', ip=self.modGlobals['modCtrls'])
+		utils.matrixConstraint(
+			self.globalPlug,
+			self.controllers['ik_ctrl'].null,
+			self.controllers['pv_ctrl'].null,
+			ss='xyz',
+			ip=self.modGlobals['modCtrls']
+		)
 	# end def preBuild():
 
 	def build(self):
-
 
 		# orientation down chain: mult for x axis in aim mat
 		# check for maya math nodes,
@@ -107,8 +128,7 @@ class SimpleIkArm(ModuleBase):
 		zVec_vecMtxProd = pm.createNode('vectorProduct', n='{}_03_zVec_vecMtxProd'.format(self.name))
 		ctrl_distB = pm.createNode('distanceBetween', n='{}_ctrl_distB'.format(self.name))
 		rot_inv_trnpM = pm.createNode('transposeMatrix', n='{}_02_trnpM'.format(self.name))
-		output_03_fourM = pm.createNode('fourByFourMatrix', n='{}_03_result_fourM'.format(self.name))
-		socket_invertM = pm.createNode('inverseMatrix', n='{}_socket_invertM'.format(self.name))
+		local_output_03_fourM = pm.createNode('fourByFourMatrix', n='{}_03_result_fourM'.format(self.name))
 		baseLength_scale_mdl = pm.createNode('multDoubleLinear', n='{}_baseLength_scale_mdl'.format(self.name))
 		output_02_compM = pm.createNode('composeMatrix', n='{}_02_BIND_compM'.format(self.name))
 		pv_ctrl_dcmpM = pm.createNode('decomposeMatrix', n='{}_pv_ctrl_dcmpM'.format(self.name))
@@ -142,6 +162,7 @@ class SimpleIkArm(ModuleBase):
 		b_double_prod_mdl = pm.createNode('multDoubleLinear', n='{}_b_double_prod_mdl'.format(self.name))
 		b_c_prod_mdl = pm.createNode('multDoubleLinear', n='{}_b_c_prod_mdl'.format(self.name))
 		radius_a_sqr_mdl = pm.createNode('multDoubleLinear', n='{}_radius_a_sqr_mdl'.format(self.name))
+		output_03_multM = pm.createNode('multMatrix', n='{}_03_worldSpace_multM'.format(self.name))
 
 		elbow_rot_min180_animBlend.setAttr('inputB', -180.0)
 		elbow_incos_md.setAttr('operation', 2)
@@ -184,25 +205,25 @@ class SimpleIkArm(ModuleBase):
 		add_a_b_sqr_adl.output >> minus_c_pma.input1D[0]
 		dist_c_sqr_mdl.output >> minus_c_pma.input1D[1]
 		b_double_prod_mdl.output >> a_b_prod_mdl.input1
-		self.controllers[2].ctrl.radius >> a_b_prod_mdl.input2
+		self.controllers['ik_ctrl'].ctrl.radius >> a_b_prod_mdl.input2
 		dist_scale_md.outputX >> dist_c_sqr_mdl.input1
 		dist_scale_md.outputX >> dist_c_sqr_mdl.input2
-		self.controllers[2].ctrl.humerus >> humerus_b_sqr_mdl.input1
-		self.controllers[2].ctrl.humerus >> humerus_b_sqr_mdl.input2
+		self.controllers['ik_ctrl'].ctrl.humerus >> humerus_b_sqr_mdl.input1
+		self.controllers['ik_ctrl'].ctrl.humerus >> humerus_b_sqr_mdl.input2
 		radius_a_sqr_mdl.output >> add_a_b_sqr_adl.input1
 		humerus_b_sqr_mdl.output >> add_a_b_sqr_adl.input2
-		self.controllers[2].ctrl.humerus >> b_double_prod_mdl.input1
+		self.controllers['ik_ctrl'].ctrl.humerus >> b_double_prod_mdl.input1
 		dist_scale_md.outputX >> b_c_prod_mdl.input1
 		b_double_prod_mdl.output >> b_c_prod_mdl.input2
-		self.controllers[2].ctrl.radius >> radius_a_sqr_mdl.input1
-		self.controllers[2].ctrl.radius >> radius_a_sqr_mdl.input2
+		self.controllers['ik_ctrl'].ctrl.radius >> radius_a_sqr_mdl.input1
+		self.controllers['ik_ctrl'].ctrl.radius >> radius_a_sqr_mdl.input2
 		stretchPercent_md.outputX >> stretchLimiter_clmp.inputR
 		stretch_blndA.output >> stretchLimiter_clmp.maxR
-		self.controllers[2].ctrl.radius >> radiusStretch_mdl.input1
-		self.controllers[0].ctrl.worldMatrix[0] >> base_ctrl_dcmpM.inputMatrix
+		self.controllers['ik_ctrl'].ctrl.radius >> radiusStretch_mdl.input1
+		self.controllers['base_ctrl'].ctrl.worldMatrix[0] >> base_ctrl_dcmpM.inputMatrix
 		limited_vec_clmp.outputR >> dist_scale_md.input1X
 		self.socketDcmp.outputScaleX >> dist_scale_md.input2X
-		self.controllers[2].ctrl.stretch >> stretch_blndA.attributesBlender
+		self.controllers['ik_ctrl'].ctrl.stretch >> stretch_blndA.attributesBlender
 		base_aim_matrix.output >> output_01_multM.matrixIn[1]
 		baseLength_scale_mdl.output >> stretchPercent_md.input2X
 		ctrl_distB.distance >> stretchPercent_md.input1X
@@ -210,33 +231,32 @@ class SimpleIkArm(ModuleBase):
 		base_ctrl_dcmpM.outputTranslate >> ctrl_distB.point1
 		ctrl_dcmpM.outputTranslate >> ctrl_distB.point2
 		world_02_multM.matrixSum >> rot_inv_trnpM.inputMatrix
-		xVec_vecMtxProd.outputX >> output_03_fourM.in00
-		xVec_vecMtxProd.outputY >> output_03_fourM.in01
-		xVec_vecMtxProd.outputZ >> output_03_fourM.in02
-		yVec_vecMtxProd.outputY >> output_03_fourM.in11
-		yVec_vecMtxProd.outputZ >> output_03_fourM.in12
-		zVec_vecMtxProd.outputX >> output_03_fourM.in20
-		zVec_vecMtxProd.outputY >> output_03_fourM.in21
-		zVec_vecMtxProd.outputZ >> output_03_fourM.in22
-		yVec_vecMtxProd.outputX >> output_03_fourM.in10
-		radiusStretch_mdl.output >> output_03_fourM.in30
-		self.modGlobals['modInput'].RB_Socket >> socket_invertM.inputMatrix
+		xVec_vecMtxProd.outputX >> local_output_03_fourM.in00
+		xVec_vecMtxProd.outputY >> local_output_03_fourM.in01
+		xVec_vecMtxProd.outputZ >> local_output_03_fourM.in02
+		yVec_vecMtxProd.outputY >> local_output_03_fourM.in11
+		yVec_vecMtxProd.outputZ >> local_output_03_fourM.in12
+		zVec_vecMtxProd.outputX >> local_output_03_fourM.in20
+		zVec_vecMtxProd.outputY >> local_output_03_fourM.in21
+		zVec_vecMtxProd.outputZ >> local_output_03_fourM.in22
+		yVec_vecMtxProd.outputX >> local_output_03_fourM.in10
+		radiusStretch_mdl.output >> local_output_03_fourM.in30
+		local_output_03_fourM.output >> output_03_multM.matrixIn[0]
+		world_02_multM.matrixSum >> output_03_multM.matrixIn[1]
 		baseLength_adl.output >> baseLength_scale_mdl.input1
 		self.socketDcmp.outputScaleX >> baseLength_scale_mdl.input2
 		humerusStretch_mdl.output >> output_02_compM.inputTranslateX
-		self.controllers[1].ctrl.worldMatrix[0] >> pv_ctrl_dcmpM.inputMatrix
-		self.controllers[2].ctrl.worldMatrix[0] >> ctrl_dcmpM.inputMatrix
-		self.controllers[2].ctrl.humerus >> baseLength_adl.input1
-		self.controllers[2].ctrl.radius >> baseLength_adl.input2
+		self.controllers['pv_ctrl'].ctrl.worldMatrix[0] >> pv_ctrl_dcmpM.inputMatrix
+		self.controllers['ik_ctrl'].ctrl.worldMatrix[0] >> ctrl_dcmpM.inputMatrix
+		self.controllers['ik_ctrl'].ctrl.humerus >> baseLength_adl.input1
+		self.controllers['ik_ctrl'].ctrl.radius >> baseLength_adl.input2
 		output_02_compM.outputMatrix >> world_02_multM.matrixIn[0]
 		output_01_multM.matrixSum >> world_02_multM.matrixIn[1]
-		self.modGlobals['modInput'].RB_Socket >> world_02_multM.matrixIn[2]
 		ctrl_distB.distance >> limited_vec_clmp.inputR
 		baseLength_scale_mdl.output >> limited_vec_clmp.maxR
 		localRot_03_multM.matrixSum >> xVec_vecMtxProd.matrix
 		ik_rotations_compM.outputMatrix >> output_01_multM.matrixIn[0]
-		socket_invertM.outputMatrix >> output_01_multM.matrixIn[2]
-		self.controllers[2].ctrl.humerus >> humerusStretch_mdl.input1
+		self.controllers['ik_ctrl'].ctrl.humerus >> humerusStretch_mdl.input1
 		localVec_pma.output3D >> localVec_norm.input1
 		localVec_norm.outputX >> base_aim_matrix.in00
 		localVec_norm.outputY >> base_aim_matrix.in01
@@ -250,10 +270,11 @@ class SimpleIkArm(ModuleBase):
 		base_ctrl_dcmpM.outputTranslateX >> base_aim_matrix.in30
 		base_ctrl_dcmpM.outputTranslateY >> base_aim_matrix.in31
 		base_ctrl_dcmpM.outputTranslateZ >> base_aim_matrix.in32
-		self.controllers[2].ctrl.worldMatrix[0] >> localRot_03_multM.matrixIn[0]
+		self.controllers['ik_ctrl'].ctrl.worldMatrix[0] >> localRot_03_multM.matrixIn[0]
 		rot_inv_trnpM.outputMatrix >> localRot_03_multM.matrixIn[1]
 		localRot_03_multM.matrixSum >> yVec_vecMtxProd.matrix
 		shoulder_angle_acos.output >> ik_rotations_compM.inputRotateY
+		self.socketDcmp.outputScale >> ik_rotations_compM.inputScale
 		pv_ctrl_dcmpM.outputTranslate >> pv_localVec_pma.input3D[0]
 		base_ctrl_dcmpM.outputTranslate >> pv_localVec_pma.input3D[1]
 		localVec_norm.output >> base_aim_zVec_crsP.input1
@@ -262,12 +283,8 @@ class SimpleIkArm(ModuleBase):
 		if axis == 'X':
 			stretchLimiter_clmp.outputR >> radiusStretch_mdl.input2
 			stretchLimiter_clmp.outputR >> humerusStretch_mdl.input2
-			# pv_ctrl_dcmpM.outputTranslate >> pv_localVec_pma.input3D[0]
-			# base_ctrl_dcmpM.outputTranslate >> pv_localVec_pma.input3D[1]
 			ctrl_dcmpM.outputTranslate >> localVec_pma.input3D[0]
 			base_ctrl_dcmpM.outputTranslate >> localVec_pma.input3D[1]
-			# localVec_norm.output >> base_aim_zVec_crsP.input1
-			# base_aim_yVec_crsP.output >> base_aim_zVec_crsP.input2
 			localVec_pma.output3D >> base_aim_yVec_crsP.input1
 			pv_localVec_pma.output3D >> base_aim_yVec_crsP.input2
 		else:
@@ -276,46 +293,13 @@ class SimpleIkArm(ModuleBase):
 			negate_stretch_mdl.output >> humerusStretch_mdl.input2
 			stretchLimiter_clmp.outputR >> negate_stretch_mdl.input1
 			negate_stretch_mdl.input2.set(-1)
-			# negate_shoulder_ab = pm.createNode('animBlendNodeAdditiveDA', n='{}_negateShoulder_ab'.format(self.name))
-			# shoulder_angle_acos.output >> ik_rotations_compM.inputRotateY
-			# negate_shoulder_ab.output >> ik_rotations_compM.inputRotateY
-			# negate_shoulder_ab.setAttr('weightB', 0.0)
-			# negate_shoulder_ab.setAttr('weightA', -1.0)
 			localVec_pma.output3D >> base_aim_yVec_crsP.input2
 			pv_localVec_pma.output3D >> base_aim_yVec_crsP.input1
-
-			# pv_ctrl_dcmpM.outputTranslate >> pv_localVec_pma.input3D[1]
-			# base_ctrl_dcmpM.outputTranslate >> pv_localVec_pma.input3D[0]
 			ctrl_dcmpM.outputTranslate >> localVec_pma.input3D[1]
 			base_ctrl_dcmpM.outputTranslate >> localVec_pma.input3D[0]
-			# localVec_norm.output >> base_aim_zVec_crsP.input2
-			# base_aim_yVec_crsP.output >> base_aim_zVec_crsP.input1
 
-		# Handle outputs
-		hold_outputs = [
-			{'name': '%s_out' % self.chain[0], 'at': 'matrix'},
-			{'name': '%s_out' % self.chain[1], 'at': 'matrix'},
-			{'name': '%s_out' % self.chain[2], 'at': 'matrix'},
-		]
-		joint_outputs = []
-		for output in hold_outputs:
-			joint_outputs.append(utils.makeAttrFromDict(self.modGlobals['modOutput'], output))
-
-		chain_01_dcmpM = pm.createNode('decomposeMatrix', n='{}_dcmpM'.format(self.chain[0]))
-		chain_02_dcmpM = pm.createNode('decomposeMatrix', n='{}_dcmpM'.format(self.chain[1]))
-		chain_03_dcmpM = pm.createNode('decomposeMatrix', n='{}_dcmpM'.format(self.chain[2]))
-
-		output_01_multM.matrixSum >> joint_outputs[0]
-		output_02_compM.outputMatrix >> joint_outputs[1]
-		output_03_fourM.output >> joint_outputs[2]
-		joint_outputs[0] >> chain_01_dcmpM.inputMatrix
-		joint_outputs[1] >> chain_02_dcmpM.inputMatrix
-		joint_outputs[2] >> chain_03_dcmpM.inputMatrix
-		chain_01_dcmpM.outputTranslate >> self.chain[0].translate
-		chain_02_dcmpM.outputTranslate >> self.chain[1].translate
-		chain_03_dcmpM.outputTranslate >> self.chain[2].translate
-		chain_01_dcmpM.outputRotate >> self.chain[0].rotate
-		chain_02_dcmpM.outputRotate >> self.chain[1].rotate
-		chain_03_dcmpM.outputRotate >> self.chain[2].rotate
+		output_01_multM.matrixSum >> self.outputPlug[0]
+		world_02_multM.matrixSum >> self.outputPlug[1]
+		output_03_multM.matrixSum >> self.outputPlug[2]
 	# end def build():
 # end class SimpleIkArm():

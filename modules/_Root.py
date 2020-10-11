@@ -29,22 +29,41 @@ class _Root(ModuleBase):
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def preBuild(self):
-		self.controllers.append(ctrl.control(name='cog', shape='cog', colour='pink', size=5))
+		self.controllers['cog'] = \
+			ctrl.control(
+				name=user.prefs['cog-ctrl-name'],
+				shape='circle',
+				colour='pink',
+				size=5.5)
 
-		pm.matchTransform(self.controllers[2].null, self.chain[1])  # match to the cog placement joint
-		self.controllers[2].null.setParent(self.controllers[1])
+		self.controllers['cogPivot'] = \
+			ctrl.control(
+				name=user.prefs['pivot-ctrl-name'],
+				shape='cog',
+				colour='purple',
+				size=5)
+
+		self.controllers['cog'].rotateCtrlShapes(rotate=90, axis=[0,0,1])
+
+		self.controllers['cog'].makeAttrFromDict({'name': 'Pivot_Visibility', 'at': 'bool', 'k': False}) \
+			>> self.controllers['cogPivot'].ctrl.visibility
+
+		self.controllers['cogPivot'].null.setParent(self.controllers['cog'].ctrl)
+
+		pm.matchTransform(self.controllers['cog'].null, self.chain[1], pos=True, rot=True)  # position on cog placement
+		self.controllers['cog'].null.setParent(self.controllers['root2'])
 	# end def preBuild():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def build(self):
-		root2_world_outputs = self.controllers[1].worldMatrix[0].outputs()
+		root2_world_outputs = self.controllers['root2'].worldMatrix[0].outputs()
 
 		root2_dcmp = next(  # get node if node exists in outputs else createNode
 			(o for o in root2_world_outputs if o.nodeType() == 'decomposeMatrix'),
-			pm.createNode('decomposeMatrix', n='{}_dcmpM'.format(self.controllers[1]))
+			pm.createNode('decomposeMatrix', n='{}_dcmpM'.format(self.controllers['root2']))
 		)
-		if not self.controllers[1].worldMatrix[0].isConnectedTo(root2_dcmp.inputMatrix):
-			self.controllers[1].worldMatrix[0] >> root2_dcmp.inputMatrix
+		if not self.controllers['root2'].worldMatrix[0].isConnectedTo(root2_dcmp.inputMatrix):
+			self.controllers['root2'].worldMatrix[0] >> root2_dcmp.inputMatrix
 
 		for node in self.modGlobals.values():
 
@@ -58,21 +77,23 @@ class _Root(ModuleBase):
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def postBuild(self):
-		super(_Root, self).postBuild()
+		root_shape = self.root.getShape()
+		if root_shape:
+			pm.delete(root_shape)
+		self.root.useOutlinerColor.set(0)
 
-		utils.setOverrideColour('grey', self.controllers[0])
-		utils.scaleCtrlShapes(self.controllers[0], scale_mult=45, line_width=-1)
+		utils.setOverrideColour('grey', self.controllers['root'])
+		utils.scaleCtrlShapes(self.controllers['root'], scale_mult=45, line_width=-1)
 
-		utils.scaleCtrlShapes(self.controllers[1], scale_mult=10.2, line_width=2)
-		utils.setOverrideColour('light-orange', self.controllers[1])
+		utils.scaleCtrlShapes(self.controllers['root2'], scale_mult=10.2, line_width=2)
+		utils.setOverrideColour('light-orange', self.controllers['root2'])
 
-		for c in self.chain[2:]:
-			pm.delete(c)
+		pm.delete(self.chain[1])
 	# end def postBuild():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	def encapsulate(self):
-		pass  # TODO
+		pass  # TODO ?
 	# end def encapsulate():
 
 	# ------------------------------------------------------------------------------------------------------------------
@@ -86,39 +107,37 @@ class _Root(ModuleBase):
 		if tree.component == user.prefs['root-ctrl-name']:
 			if pm.objExists('{0}_{1}'.format(user.prefs['root-ctrl-name'], user.prefs['ctrl-suffix'])):
 
-				self.controllers.append(
-					pm.PyNode('{0}_{1}'.format(user.prefs['root-ctrl-name'], user.prefs['ctrl-suffix'])))
-				self.controllers.append(
-					pm.PyNode('{0}_{1}'.format(user.prefs['root2-ctrl-name'], user.prefs['ctrl-suffix'])))
+				self.controllers['root'] = \
+					pm.PyNode('{0}_{1}'.format(user.prefs['root-ctrl-name'], user.prefs['ctrl-suffix']))
+				self.controllers['root2'] = \
+					pm.PyNode('{0}_{1}'.format(user.prefs['root2-ctrl-name'], user.prefs['ctrl-suffix']))
 
 			else:
-				self.controllers.append(
+				self.controllers['root'] = \
 					pm.circle(
 						n=(tree.component + '_' + user.prefs['ctrl-suffix']),
 						nry=1,
 						nrz=0,
-						ch=False)[0])
+						ch=False)[0]
 
-				# utils.setOverrideColour('grey', god_ctrl)
-				# utils.scaleCtrlShapes(god_ctrl, scale_mult=45, line_width=-1)
 				for axis in ['X', 'Z']:
 					pm.connectAttr(
-						'{}.scaleY'.format(self.controllers[0]),
-						'{}.scale{}'.format(self.controllers[0], axis))
-					pm.setAttr('{}.scale{}'.format(self.controllers[0], axis), lock=True)
+						'{}.scaleY'.format(self.controllers['root']),
+						'{}.scale{}'.format(self.controllers['root'], axis))
+					pm.setAttr('{}.scale{}'.format(self.controllers['root'], axis), lock=True)
 
-				self.controllers.append(
+				self.controllers['root2'] = \
 					pm.curve(
 						d=1,
 						p=data.controllerShapes['omni-circle'],
-						n=user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix']))
+						n=user.prefs['root2-ctrl-name'] + '_' + user.prefs['ctrl-suffix'])
 
-				self.controllers[1].setParent(self.controllers[0])
+				self.controllers['root2'].setParent(self.controllers['root'])
 
 			if socket != 'World':
-				pm.parent(self.controllers[0], socket)
+				pm.parent(self.controllers['root'], socket)
 
-			next_socket = self.controllers[0]
+			next_socket = self.controllers['root']
 
 		else:  # component must be null at this point
 			if pm.objExists(tree.component):
