@@ -196,17 +196,23 @@ def scaleCtrlShapes(*args, **kwargs):
 	"""
 	Scale ctrl shapes and set line width
 
-	:param args: list of transform nodes to change
-	:param kwargs:  scale_mult: amount to scale ctrl curve, default 1
-					line_width: line width thickness, ignores if not specified
+	:param args:  Transform nodes to change
+	:param kwargs:  scale_mult | s: amount to scale ctrl curve, default 1
+					line_width | lw: line width thickness, ignores if not specified
 	"""
-	scale_mult = kwargs.pop('scale_mult', 1)
-	line_width = kwargs.pop('line_width', None)
+	scale_mult = kwargs.pop('scale_mult', kwargs.pop('s', 1))
+	line_width = kwargs.pop('line_width', kwargs.pop('lw', None))
+
+	if kwargs:
+		raise ValueError('--Unknown argument: {}'.format(kwargs))
 
 	ctrl_ls = makePyNodeList(args)
 
 	for ctrl in ctrl_ls:
 		shapes = ctrl.getChildren()
+		if ctrl.nodeType() == 'nurbsCurve':
+			shapes.append(ctrl)
+
 		for shape in shapes:
 			if 'nurbsCurve' in shape.nodeType():
 				curv_type = pm.getAttr('%s.form' % shape)
@@ -225,6 +231,45 @@ def scaleCtrlShapes(*args, **kwargs):
 				if line_width:
 					shape.lineWidth.set(line_width)
 # end def scaleCtrlShapes():
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+def rotateCtrlShapes(*args, **kwargs):
+	"""
+	Rotate ctrl shapes around given axis
+
+	:param args:  transform nodes to change
+	:param kwargs:  rotate | r: `float` amount to rotate default: 0.0
+					axis | a: `list` rotate around these axis default: [1,0,0]
+	:return:  None
+	"""
+	rot = kwargs.pop('rotate', kwargs.pop('r', 0.0))
+	axis = kwargs.pop('axis', kwargs.pop('a', [1, 0, 0]))
+
+	if kwargs:
+		raise ValueError('--Unknown argument: {}'.format(kwargs))
+
+	ctrl_ls = makePyNodeList(args)
+
+	result_rot = [a * rot for a in axis]
+
+	for ctrl in ctrl_ls:
+		shapes = ctrl.getChildren()
+		if ctrl.nodeType() == 'nurbsCurve':
+			shapes.append(ctrl)
+
+		for shape in shapes:
+			if 'nurbsCurve' in shape.nodeType():
+				curv_type = pm.getAttr('%s.form' % shape)
+				# if curve open get curve points
+				if curv_type == 0:
+					num_cv = pm.getAttr('%s.cp' % shape, s=1)
+				# else curve must be closed so get spans
+				else:
+					num_cv = pm.getAttr('%s.spans' % shape)
+				for i in xrange(num_cv):
+					pm.xform('{}.cv[{}]'.format(shape, i), ro=result_rot)
+# end def rotateCtrlShapes():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -449,6 +494,7 @@ def resetBindPose(jnts, selected=False):
 
 # ----------------------------------------------------------------------------------------------------------------------
 # TODO: use are length vector not local end vect
+# tODO: also if joints are at really small angles it doesn't project it very well
 def positionUpVectorFromPoints(point_start, point_mid, point_end, magnitude=1.2):
 	"""
 	Gets xyz world co-ordinates for a projected point that sits on the plane of the specified points.
