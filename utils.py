@@ -728,7 +728,7 @@ def makeRoot():
 		cog_place.setParent(root_jnt)
 		cleanScaleCompensate(display)
 		cleanScaleCompensate(cog_place)
-		lockHide({'r': 1, 's': 'xy', 't': 'z', 'v': 1}, *display)
+		lockHide({'r': 1, 's': 1, 't': 1, 'v': 1}, *display)
 
 	return root_jnt
 # end def makeRoot():
