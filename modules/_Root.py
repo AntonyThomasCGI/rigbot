@@ -46,7 +46,7 @@ class _Root(ModuleBase):
 		self.controllers['cog'].rotateCtrlShapes(rotate=90, axis=[0,0,1])
 
 		self.controllers['cog'].makeAttrFromDict({'name': 'Pivot_Visibility', 'at': 'bool', 'k': False}) \
-			>> self.controllers['cogPivot'].ctrl.visibility
+			>> self.controllers['cogPivot'].shape.visibility
 
 		self.controllers['cogPivot'].null.setParent(self.controllers['cog'].ctrl)
 
