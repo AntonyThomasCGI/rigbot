@@ -729,7 +729,7 @@ def makeRoot():
 		cog_place.setParent(root_jnt)
 		cleanScaleCompensate(display)
 		cleanScaleCompensate(cog_place)
-		lockHide({'r': 1, 's': 'xy', 't': 'z', 'v': 1}, *display)
+		lockHide({'r': 1, 's': 1, 't': 1, 'v': 1}, *display)
 
 	return root_jnt
 # end def makeRoot():
@@ -853,7 +853,7 @@ def getModuleNodes(module_grp):
 	output = next((y for y in module_dag if y.endswith('output')), None)
 
 	if input is None or output is None:
-		raise TypeError('--Failed to find input and/or ouput nodes in hierarchy.')
+		raise TypeError('--Failed to find input and/or output nodes in hierarchy.')
 
 	module_nodes = {module_grp}
 	module_nodes |= set([x for x in iterDgNodes(input, down_stream=True, end=output)])

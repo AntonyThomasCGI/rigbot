@@ -1,10 +1,3 @@
-import pymel.core as pm
-
-from .. import user, utils, data
-
-from .. import modules as mod
-
-
 # ----------------------------------------------------------------------------------------------------------------------
 """
 
@@ -14,6 +7,13 @@ from .. import modules as mod
 """
 # ----------------------------------------------------------------------------------------------------------------------
 
+import pymel.core as pm
+
+from .. import user, utils, data
+
+from .. import modules as mod
+
+
 
 class ScaffoldException(Exception):
 	pass
@@ -21,16 +21,41 @@ class ScaffoldException(Exception):
 
 class Scaffold(object):
 
-	# Specify what modules can build from this scaffold
-	_availableModules = utils.getFilteredDir('modules', ignore_private=False)
-	_availableModules.append(' ')
+	_available_modules = utils.getFilteredDir('modules', ignore_private=False) + [' ']
+
+	# TODO - add matrix position property and setter with world/local flags ?
+	# TODO - how to easily make templates on chain indices
 
 	# ------------------------------------------------------------------------------------------------------------------
-	def __init__(self, module_root):
+	def __init__(self, *args, **kwargs):
 		"""
-		:param module_root: PyNode, valid module root to populate
-							scaffold class attributes from.
+		:param args:		`PyNode` or `str`, get scaffold instance from existing module by passing a PyNode of
+		 					a valid module root.
+
+		:param kwargs:		name | n		:	`str`, Prefix name for new scaffold.
+
+		 					length | l		:	`int`, Number of joints for new scaffold.
+
+		 					socket | s		:	`str` or `PyNode`, Parent node for new scaffold.
+
+		 					moduleType | mt :	`str`, Module type for new scaffold (has to be implemented
+		 										in \modules).
+
+		 					includeEnd | ie :	`bool`, If this scaffold, when built, should include end
+		 										joint when rigging.
 		"""
+		if args:
+			arg_nodes = utils.makePyNodeList(args)
+			if len(arg_nodes) > 1:
+				raise TypeError(
+					'--Scaffold class can only be instantiated with one node. Recieved: {}'.format(args))
+			if kwargs:
+				raise TypeError(
+					'--Non keyword arguments used in conjunction with constructor for existing scaffold chain.')
+			module_root = arg_nodes[0]
+		else:
+			module_root = self.make(**kwargs)
+
 
 		if not module_root.hasAttr('RB_MODULE_ROOT'):
 			raise TypeError('--"{}" is not a module root.'.format(module_root))
@@ -38,7 +63,7 @@ class Scaffold(object):
 		self.chain = utils.getModuleChildren(module_root)
 
 		self._moduleType = module_root.getAttr('RB_module_type', asString=True)
-		if self._moduleType not in self._availableModules:
+		if self._moduleType not in self._available_modules:
 			raise ScaffoldException('Module type: {} is not in list of available modules.'.format(self._moduleType))
 
 		if module_root.hasAttr('RB_include_end_joint'):
@@ -50,9 +75,9 @@ class Scaffold(object):
 		self._length = set()
 
 		if not self.moduleType == '_Root':
-			self.socket = module_root.listRelatives(parent=True)[0]
+			self._socket = module_root.listRelatives(parent=True)[0]
 		else:
-			self.socket = None
+			self._socket = None
 	# end def __init__():
 
 	def __str__(self):
@@ -113,7 +138,7 @@ class Scaffold(object):
 			try:
 				self.root.RB_module_type.set(new_module)
 			except pm.MayaAttributeEnumError:
-				raise ScaffoldException("--This scaffold does not support module type: {}".format(new_module))
+				raise ScaffoldException('--This scaffold does not support module type: {}'.format(new_module))
 
 		self._moduleType = new_module
 	# end moduleType.setter
@@ -156,11 +181,10 @@ class Scaffold(object):
 	@staticmethod
 	def getModName(node_name):
 		"""
-		Get module nice name from a node name
-		:param node_name: (PyNode) node name to make nice name
-		:return: string stripped node nice name
+		Get module nice name from a node name.
+		:param node_name:  `PyNode` node name to make nice name.
+		:return:  str of nice name
 		"""
-
 		split_ls = node_name.split('_')
 		mod_name = split_ls[0]
 
@@ -170,79 +194,78 @@ class Scaffold(object):
 
 		return mod_name
 	# end def getModName():
+
+	@staticmethod
+	def make(**kwargs):
+		"""
+		Makes new scaffold for auto rigger to build from.
+
+		:param kwargs:		name | n		:	`str`, Prefix name for new scaffold.
+
+		 					length | l		:	`int`, Number of joints for new scaffold.
+
+		 					socket | s		:	`str` or `PyNode`, Parent node for new scaffold.
+
+		 					moduleType | mt :	`str`, Module type for new scaffold (has to be implemented
+		 										in \modules).
+
+		 					includeEnd | ie :	`bool`, If this scaffold, when built, should include end
+		 										joint when rigging.
+		"""
+		name = kwargs.pop('name', kwargs.pop('n', 'untitled'))
+		length = kwargs.pop('length', kwargs.pop('l', 1))
+		socket = kwargs.pop('socket', kwargs.pop('s', utils.makeRoot()))
+		module_type = kwargs.pop('moduleType', kwargs.pop('mt', ' '))
+		include_end = kwargs.pop('includeEnd', kwargs.pop('ie', True))
+
+		if kwargs:
+			raise ValueError('--Unknown argument(s): {}'.format(kwargs))
+
+		if module_type not in utils.getFilteredDir('modules') and module_type != ' ':
+			raise TypeError('--Module type is invalid or not yet implemented.')
+
+		if isinstance(socket, basestring):
+			if pm.objExists(socket):
+				socket = pm.PyNode(socket)
+			else:
+				raise ValueError('--Socket does not exist: {}'.format(socket))
+
+		if socket.nodeType() != 'joint':
+			raise TypeError('--Expected socket to be joint but got type: {}'.format(socket.nodeType()))
+
+		chain = utils.makeJointChain(length, name, user.prefs['bind-skeleton-suffix'])
+
+		pm.matchTransform(chain[0], socket)
+		pm.parent(chain[0], socket)
+
+		curv = pm.curve(d=1, p=data.controllerShapes['locator'], n=(name + '_display'))
+		utils.scaleCtrlShapes(curv, scale_mult=0.5, line_width=3)
+
+		shape = curv.getChildren()[0]
+		pm.parent(shape, chain[0], r=True, s=True)
+		pm.delete(curv)
+
+		# setting colours
+		utils.setOverrideColour(user.prefs['default-jnt-colour'], chain)
+		utils.setOverrideColour(user.prefs['module-root-colour'], chain[0])
+		utils.setOutlinerColour(user.prefs['module-root-colour'], chain[0])
+		utils.setOverrideColour(user.prefs['default-jnt-colour'], shape)
+
+		all_modules = utils.getFilteredDir('modules')
+		all_modules.append(' ')
+
+		default_tags = [
+			{'name': 'RB_MODULE_ROOT', 'at': 'enum', 'en': ' ', 'k': 0, 'l': 1},
+			{'name': 'RB_module_type', 'k': 0, 'at': 'enum', 'en': (':'.join(all_modules)),
+			 'dv': (all_modules.index(module_type))},
+			{'name': 'RB_include_end_joint', 'k': 0, 'at': 'bool', 'dv': include_end},
+		]
+		for attr_dict in default_tags:
+			utils.makeAttrFromDict(chain[0], attr_dict)
+
+		return chain[0]
+	# end def make(self):
 # end class Scaffold():
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-def makeScaffold(moduleType=' ', length=1, name='untitled', socket='root', includeEnd=1):
-	"""
-	Makes new scaffold for auto rigger to build from.
-
-	:param moduleType: (string) Type of module chain will build into.
-	:param length: (int) Joint chain length.
-	:param name: (string) Naming convention prefix.
-	:param socket: (PyNode or string) Parent for module.
-	:param include_end: (bool) If auto rigger should generate controllers on end joint.
-	:return: scaffold class object
-	"""
-	if moduleType not in utils.getFilteredDir('modules') and moduleType != ' ':
-		raise TypeError('--Module type is invalid or not yet implemented.')
-
-	chain = utils.makeJointChain(length, name, user.prefs['bind-skeleton-suffix'])
-
-	def returnValidParent(node):
-		"""
-		Get valid socket to parent module to
-		:param node: (string or pyNode) Test if this node is a valid parent
-		:return: node if node is a valid parent else return root joint
-		"""
-
-		try:
-			if isinstance(node, basestring):
-				node = pm.PyNode(node)
-		except pm.MayaObjectError:
-			root_node = utils.makeRoot()
-			return root_node
-
-		if 'joint' == node.nodeType():
-			return node
-		else:
-			root_node = utils.makeRoot()
-			return root_node
-	# end def returnValidParent():
-
-	socket = returnValidParent(socket)
-
-	pm.matchTransform(chain[0], socket)
-	pm.parent(chain[0], socket)
-
-	curv = pm.curve(d=1, p=data.controllerShapes['locator'], n=(name + '_display'))
-	utils.scaleCtrlShapes(curv, scale_mult=0.5, line_width=3)
-
-	shape = curv.getChildren()[0]
-	pm.parent(shape, chain[0], r=True, s=True)
-	pm.delete(curv)
-
-	# setting colours
-	utils.setOverrideColour(user.prefs['default-jnt-colour'], chain)
-	utils.setOverrideColour(user.prefs['module-root-colour'], chain[0])
-	utils.setOutlinerColour(user.prefs['module-root-colour'], chain[0])
-	utils.setOverrideColour(user.prefs['default-jnt-colour'], shape)
-
-	all_modules = utils.getFilteredDir('modules')
-	all_modules.append(' ')
-
-	default_tags = [
-		{'name': 'RB_MODULE_ROOT', 'at': 'enum', 'en': ' ', 'k': 0, 'l': 1},
-		{'name': 'RB_module_type', 'k': 0, 'at': 'enum', 'en': (':'.join(all_modules)),
-			'dv': (all_modules.index(moduleType))},
-		{'name': 'RB_include_end_joint', 'k': 0, 'at': 'bool', 'dv': includeEnd},
-	]
-	for attr_dict in default_tags:
-		utils.makeAttrFromDict(chain[0], attr_dict)
-
-	return Scaffold(chain[0])
-# end def addScaffold(self):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -273,6 +296,8 @@ def batchBuild(scaffolds=None):
 	# TODO: potentially this should be implemented in in module classes as well eg;
 	# TODO: 		validateJointChain()
 	# TODO: 		if biped arm > 3 joints pass errors back, report, default to ' ' module type.
+	# tODO: 		Need to validate if includeEnd is checked up there is a component socketed to end joint. -
+	# TODO:				Maybe just scrap lol.
 
 	modules = []
 	for scaffold in scaffolds:
@@ -316,7 +341,7 @@ def batchBuild(scaffolds=None):
 def getModules():
 	"""
 	Get all of the current modules under the root joint
-	:return: List of rigbot module/scaffold objects
+	:return: `List` of rigbot Module/Scaffold objects
 	"""
 	if user.debug:
 		print('>>Fetching modules.')
@@ -335,7 +360,7 @@ def getModules():
 
 	module_roots = filter(isModRoot, flattened_jnts)
 
-	modules_ls = map(lambda mod_root: Scaffold(module_root=mod_root), module_roots)
+	modules_ls = map(lambda mod_root: Scaffold(mod_root), module_roots)
 
 	return modules_ls
 # end def getModules():

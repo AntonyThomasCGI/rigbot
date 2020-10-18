@@ -23,6 +23,8 @@ class ModuleBase(object):
 	# maybe could add functor to also take selected objects and get scaffold_obj from that
 	# TODO: lock inheritsTransform
 
+	_has_dag_rig = False
+
 	def __init__(self, scaffold_obj):
 
 		# get attributes from scaffold object
@@ -66,16 +68,11 @@ class ModuleBase(object):
 		self.modGlobals['modInput'] = pm.group(n=self.name + '_input', em=True)
 		self.modGlobals['modOutput'] = pm.group(n=self.name + '_output', em=True)
 		self.modGlobals['modCtrls'] = pm.group(n=self.name + '_controls', em=True)
-		self.modGlobals['transformGrp'] = pm.group(n=self.name + '_transform', em=True)
-		self.modGlobals['noTransformGrp'] = pm.group(n=self.name + '_noTransform', em=True)
 
 		self.modGlobals['modRoot'] = pm.group(
 			self.modGlobals['modInput'], self.modGlobals['modOutput'], self.modGlobals['modCtrls'], n=self.name + '_mod'
 		)
-		rig_dag_grp = pm.group(
-			self.modGlobals['transformGrp'], self.modGlobals['noTransformGrp'], n=self.name + '_rigDag'
-		)
-		pm.parent(rig_dag_grp, self.modGlobals['modRoot'])
+
 		pm.parent(self.modGlobals['modRoot'], self.rigModuleGrp)
 
 		utils.makeAttrFromDict(self.modGlobals['modOutput'], {'name': 'RB_Output', 'at': 'matrix', 'multi': True})
@@ -95,10 +92,21 @@ class ModuleBase(object):
 		self.socketDcmp = pm.createNode('decomposeMatrix', n=self.name + '_socket_dcmpM')
 		self.modGlobals['modInput'].RB_Socket >> self.socketDcmp.inputMatrix
 
-		for item in [self.modGlobals['modCtrls'], self.modGlobals['transformGrp']]:
-			self.socketDcmp.outputTranslate >> item.translate
-			self.socketDcmp.outputRotate >> item.rotate
-			self.socketDcmp.outputScale >> item.scale
+		self.socketDcmp.outputTranslate >> self.modGlobals['modCtrls'].translate
+		self.socketDcmp.outputRotate >> self.modGlobals['modCtrls'].rotate
+		self.socketDcmp.outputScale >> self.modGlobals['modCtrls'].scale
+
+		if self._has_dag_rig:
+			self.modGlobals['transformGrp'] = pm.group(n=self.name + '_transform', em=True)
+			self.modGlobals['noTransformGrp'] = pm.group(n=self.name + '_noTransform', em=True)
+			rig_dag_grp = pm.group(
+				self.modGlobals['transformGrp'], self.modGlobals['noTransformGrp'], n=self.name + '_rigDag'
+			)
+			pm.parent(rig_dag_grp, self.modGlobals['modRoot'])
+
+			self.socketDcmp.outputTranslate >> self.modGlobals['transformGrp'].translate
+			self.socketDcmp.outputRotate >> self.modGlobals['transformGrp'].rotate
+			self.socketDcmp.outputScale >> self.modGlobals['transformGrp'].scale
 	# end registerModule():
 
 	# ------------------------------------------------------------------------------------------------------------------
