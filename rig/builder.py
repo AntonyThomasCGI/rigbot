@@ -260,8 +260,8 @@ class Scaffold(object):
 			 'dv': (all_modules.index(module_type))},
 			{'name': 'RB_include_end_joint', 'k': 0, 'at': 'bool', 'dv': include_end},
 		]
-		for attr_dict in default_tags:
-			utils.makeAttrFromDict(chain[0], attr_dict)
+		for tag in default_tags:
+			utils.makeAttr(chain[0], **tag)
 
 		return chain[0]
 	# end def make(self):
