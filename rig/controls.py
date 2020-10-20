@@ -60,9 +60,9 @@ class control(object):
 			return None
 	# end def shape():
 
-	def makeAttrFromDict(self, attr_dict):
-		return utils.makeAttrFromDict(self.ctrl, attr_dict)
-	# end def makeAttrFromDict():
+	def makeAttr(self, **kwargs):
+		return utils.makeAttr(self.ctrl, **kwargs)
+	# end def makeAttr():
 
 	def scaleCtrlShapes(self, **kwargs):
 		return utils.scaleCtrlShapes(self.ctrl, **kwargs)

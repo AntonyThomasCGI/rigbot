@@ -29,7 +29,7 @@ class SimpleFk(ModuleBase):
 			if i:
 				pm.parent(self.controllers[i].null, self.controllers[i-1].ctrl)
 		pm.parent(self.controllers[0].null, self.modGlobals['modCtrls'])
-	# end def makeBind(self):
+	# end def makeBind():
 
 	def build(self):
 		for i, this_ctrl in enumerate(self.controllers.values()):

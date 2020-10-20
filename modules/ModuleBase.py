@@ -62,6 +62,10 @@ class ModuleBase(object):
 			return 0
 	# end def __len__():
 
+	def validateChain(self):
+		pass
+	# end validateChain():
+
 	def registerModule(self):
 		# TODO: output null matrix per joint created here?
 		# make null hierarchy
@@ -75,10 +79,10 @@ class ModuleBase(object):
 
 		pm.parent(self.modGlobals['modRoot'], self.rigModuleGrp)
 
-		utils.makeAttrFromDict(self.modGlobals['modOutput'], {'name': 'RB_Output', 'at': 'matrix', 'multi': True})
+		utils.makeAttr(self.modGlobals['modOutput'], name='RB_Output', at='matrix', multi=True)
 
 		# make connections
-		utils.makeAttrFromDict(self.modGlobals['modInput'], {'name': 'RB_Socket', 'at': 'matrix'})
+		utils.makeAttr(self.modGlobals['modInput'], name='RB_Socket', at='matrix')
 
 		if self.socket.shortName() == user.prefs['root-joint']:
 			pivot_name = '{}_{}'.format(user.prefs['pivot-ctrl-name'], user.prefs['ctrl-suffix'])
@@ -211,7 +215,7 @@ class ModuleBase(object):
 		Add rig world space socket to module input null for modules that need world space ctrls such as ik handles.
 		:return: PyNode attribute plug
 		"""
-		utils.makeAttrFromDict(self.modGlobals['modInput'], {'name': 'RB_World', 'at': 'matrix'})
+		utils.makeAttr(self.modGlobals['modInput'], name='RB_World', at='matrix')
 		rig_global_ctrl = pm.PyNode('{}_{}'.format(user.prefs['root2-ctrl-name'], user.prefs['ctrl-suffix']))
 
 		rig_global_ctrl.worldMatrix[0] >> self.modGlobals['modInput'].RB_World
