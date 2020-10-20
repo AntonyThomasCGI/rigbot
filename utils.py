@@ -635,6 +635,7 @@ def matrixConstraint(parent_node, *args, **kwargs):
 		mult_m.matrixSum >> offset_dcmp_m.inputMatrix
 
 		connectDecomposeToNodes(offset_dcmp_m, nested_children)
+	return offset_dcmp_m
 # end matrixConstraint():
 
 
