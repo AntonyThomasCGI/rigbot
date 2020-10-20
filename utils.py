@@ -138,37 +138,30 @@ def makePyNodeList(*args, **kwargs):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def makeAttrFromDict(ob, attr_data):
+def makeAttr(ob, **kwargs):
 	"""
-	Creates attribute from dictionary - sets keyable=True and channelBox=True by default
+	Convenience add attr wrapper to include channel box, lock and keyable flags in once function.
 
-	:param ob: single PyNode to add attribute to
-	:param attr_data: dictionary of flags for addAttr/setAttr command
-	:return: attribute
+	:param ob:	`PyNode` to add attr to.
+
+	:param kwargs:	name | n : `str`, Attribute long name.
+					lock | l : `bool` default=0, If attr should be locked.
+					channelBox | cb : `bool` default=1, If attr should appear in channel box.
+
+					Also accepts any valid kwarg for addAttr command.
+
+	:return: `Attribute`
 	"""
-
-	try:
-		attr_name = attr_data.pop('name')
-	except NameError:
-		raise NameError('"name" was not specified in dictionary but is required to make attribute.')
+	attr_name = kwargs.pop('name', kwargs.pop('n', None))
+	lock = kwargs.pop('lock', kwargs.pop('l', 0))
+	channel_box = kwargs.pop('channelBox', kwargs.pop('cb', 1))
 
 	# if keyable not specified set keyable by default
-	if not any(key in attr_data for key in ['keyable', 'k']):
-		attr_data['keyable'] = 1
+	if not any(key in kwargs for key in ['keyable', 'k']):
+		kwargs['keyable'] = 1
 
-	# pops lock and channelbox settings as they are not addAttr flags
-	if 'lock' in attr_data:
-		lock = attr_data.pop('lock')
-	elif 'l' in attr_data:
-		lock = attr_data.pop('l')
-	else:
-		lock = 0
-	if 'channelBox' in attr_data:
-		channel_box = attr_data.pop('channelBox')
-	elif 'cb' in attr_data:
-		channel_box = attr_data.pop('cb')
-	else:
-		channel_box = 1
+	if attr_name is None:
+		raise NameError('--Name not specified but is required to make an Attribute.')
 
 	# if already has attr then delete
 	if ob.hasAttr(attr_name):
@@ -176,19 +169,16 @@ def makeAttrFromDict(ob, attr_data):
 		pm.setAttr('{}.{}'.format(ob, attr_name), l=False)
 		ob.deleteAttr(attr_name)
 
-	ob.addAttr(attr_name, **attr_data)
+	ob.addAttr(attr_name, **kwargs)
 	ob.setAttr(attr_name, l=lock)
 
-	# channel box flag is ignored if attr is keyable so this:
-	if 'keyable' in attr_data:
-		if not attr_data['keyable']:
-			ob.setAttr(attr_name, cb=channel_box)
-	else:
-		if not attr_data['k']:
-			ob.setAttr(attr_name, cb=channel_box)
+	# channel box flag only set when attr is not keyable so this:
+	keyable = kwargs.pop('keyable', kwargs.pop('k', 1))
+	if not keyable and channel_box:
+		ob.setAttr(attr_name, cb=channel_box)
 
 	return ob.attr(attr_name)
-# end def makeAttrFromDict():
+# end def makeAttr():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -240,7 +230,7 @@ def rotateCtrlShapes(*args, **kwargs):
 
 	:param args:  transform nodes to change
 	:param kwargs:  rotate | r: `float` amount to rotate default: 0.0
-					axis | a: `list` rotate around these axis default: [1,0,0]
+					axis | a: `list` rotate around these axis default: [1,0,0] TODO: can probs just take rotation value
 	:return:  None
 	"""
 	rot = kwargs.pop('rotate', kwargs.pop('r', 0.0))
@@ -273,35 +263,30 @@ def rotateCtrlShapes(*args, **kwargs):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def lockHide(attr_data, *args):
+def lockHide(*args, **kwargs):
 	"""
-	Lock and hide attributes from dictionary
+	Lock and hide attributes.
 
-	:param attr_data: 	(dictionary) attrs to lock hide eg: {'r':1, 's':'xy', 't':'z', 'v':1, 'custom_attr':1}
-						also accepts 'all' to lock/hide all default channels
-	:param args:		list of nodes to lockHide
+	:param args:		List of nodes to lock and hide attributes on.
+
+	:param kwargs:		translate | t : `str` will lock and hide these axis.
+						rotate | r : `str` will lock and hide these axis.
+						scale | s : `str` will lock and hide these axis.
+
+						Also accepts any attr name with `bool` value eg; visibility = 1
+	:return: None
 	"""
-
 	objs = makePyNodeList(args)
 
 	to_lock = []
+	for item, axis in kwargs.items():
+		if any([x == item for x in ['t', 'r', 's', 'translate', 'rotate', 'scale']]):
+			for i in range(len(axis)):
+				if axis[i] not in ['x', 'y', 'z']:
+					raise TypeError('--Not a valid axis: {}. Needs to be x y or z'.format(axis[i]))
+				to_lock.append(item + axis[i])
 
-	for item, axis in attr_data.items():
-		if any([ s == item for s in ['t', 'r', 's', 'translate', 'rotate', 'scale'] ]):
-			# as well as 'xyz' axis can be 1 or 0 so:
-			if isinstance(axis, int) and axis:
-				for channel in ['x', 'y', 'z']:
-					to_lock.append(item + channel)
-			else:
-				for i in range(len(axis)):
-					to_lock.append(item + axis[i])
-
-		# special case 'all'
-		elif item == 'all':
-			for default_attr in ['tx', 'ty', 'tz', 'rx', 'ry', 'rz', 'sx', 'sy', 'sz', 'v']:
-				to_lock.append(default_attr)
-
-		# attrs with no xyz values eg; custom attrs or visibility
+		# for any other attrs just append
 		else:
 			if axis:
 				to_lock.append(item)
@@ -459,17 +444,20 @@ def undoSetSceneToBindPose():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def resetBindPose(jnts, selected=False):
+def resetBindPose(jnts, selected_only=False):
 	"""
 	Resets the bind pose as if the skin was bound to the skeleton as it exists now it world space.
-	:param jnts: List of joints to be reset. Use in conjunction with selected flag to get hierarchy.
-	:param selected: By default will include all children of given jnts unless this is set to True.
+
+	:param jnts: `List` of joints to be reset. Use in conjunction with selected flag to get hierarchy.
+
+	:param selected_only: By default will include all children of given jnts unless this is set to True.
+
 	:return: None
 	"""
 	jnts = makePyNodeList(jnts)
 
 	jnts_to_reset = set()
-	if selected:
+	if selected_only:
 		jnts_to_reset |= set(jnts)
 	else:
 		for jnt in jnts:
@@ -705,7 +693,7 @@ def makeRoot():
 			{'name': 'RB_module_type', 'k': 0, 'at': 'enum', 'en': '_Root'},
 		]
 		for tag in tags:
-			makeAttrFromDict(root_jnt, tag)
+			makeAttr(root_jnt, **tag)
 
 		cog_place = pm.createNode('joint', n='cog_placement')
 
@@ -728,19 +716,20 @@ def makeRoot():
 		cog_place.setParent(root_jnt)
 		cleanScaleCompensate(display)
 		cleanScaleCompensate(cog_place)
-		lockHide({'r': 1, 's': 1, 't': 1, 'v': 1}, *display)
+		lockHide(*display, r='xyz', s='xyz', t='xyz', v=1)
 
 	return root_jnt
 # end def makeRoot():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# TODO: This still fails when duplicate names but probably possible to make it work.
 def getModuleChildren(modroot):
 	"""
-	Find all the child joints within a module
+	Find all the child joints within a module.
 
-	:param modroot: module root
-	:return: list of modules joints including module root
+	:param modroot: Module root.
+	:return: list of modules joints including module root.
 	"""
 
 	if pm.objExists(user.prefs['root-joint']):
