@@ -45,7 +45,7 @@ class _Root(ModuleBase):
 
 		self.controllers['cog'].rotateCtrlShapes(rotate=90, axis=[0,0,1])
 
-		self.controllers['cog'].makeAttrFromDict({'name': 'Pivot_Visibility', 'at': 'bool', 'k': False}) \
+		self.controllers['cog'].makeAttr(name='Pivot_Visibility', at='bool', k=False) \
 			>> self.controllers['cogPivot'].shape.visibility
 
 		self.controllers['cogPivot'].null.setParent(self.controllers['cog'].ctrl)
@@ -145,7 +145,7 @@ class _Root(ModuleBase):
 			else:
 				grp = pm.group(n=tree.component, em=True)
 				if tree.component == user.prefs['module-group-name']:
-					utils.makeAttrFromDict(grp, {'name': 'RB_MODULES', 'at': 'enum', 'en': ' ', 'l': 1})
+					utils.makeAttr(grp, name='RB_MODULES', at='enum', en=' ', l=1)
 
 			self.modGlobals[tree.component] = grp
 			next_socket = grp
@@ -159,4 +159,4 @@ class _Root(ModuleBase):
 		for child in tree.children:
 			self.safeCreateRigTree(child, next_socket)
 	# end def safeCreateRigTree():
-# end class SingleChain():
+# end class _Root():

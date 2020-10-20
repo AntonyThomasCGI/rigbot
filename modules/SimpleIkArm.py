@@ -49,13 +49,13 @@ class SimpleIkArm(ModuleBase):
 		for ctrl_item in self.controllers.values():
 			pm.parent(ctrl_item.null, self.modGlobals['modCtrls'])
 
-		ik_ctrl_param = [
+		tags = [
 			{'name': 'humerus', 'dv': abs(self.chain[1].translateX.get())},
 			{'name': 'radius', 'dv': abs(self.chain[2].translateX.get())},
 			{'name': 'stretch', 'at': 'bool'},
 		]
-		for param in ik_ctrl_param:
-			utils.makeAttrFromDict(self.controllers['ik_ctrl'].ctrl, param)
+		for tag in tags:
+			utils.makeAttr(self.controllers['ik_ctrl'].ctrl, **tag)
 
 		pm.matchTransform(self.controllers['base_ctrl'].null, self.chain[0])
 		pm.matchTransform(self.controllers['ik_ctrl'].null, self.chain[-1])
