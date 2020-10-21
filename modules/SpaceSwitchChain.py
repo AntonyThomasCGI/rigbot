@@ -31,10 +31,29 @@ class SpaceSwitchChain(SimpleFk):
 		super(SpaceSwitchChain, self).preBuild()
 
 		self.makeGlobalSocket()
-		self.controllers[-1].makeAttr(name='parentSpace', at='enum', en='GLOBAL:LOCAL', k=False)
+		self.ctrlList[-1].makeAttr(name='spaceBlend', nn='Space Blend GLOBAL / LOCAL', max=0, min=1)
 	# end def preBuild():
 
 	def build(self):
-		pm.createNode('multMatrix')
+		super(SpaceSwitchChain, self).build()
+
+		global_mm = pm.createNode('multMatrix', n='{}_global_multM'.format(self.name))
+
+		global_mm.matrixIn[0].set(self.ctrlList[-1].wMatrix)
+		self.globalPlug >> global_mm.matrixIn[1]
+		self.ctrlList[-2].ctrl.worldInverseMatrix[0] >> global_mm.matrixIn[2]
+
+		local_offset_mtx = self.ctrlList[-1].wMatrix * self.ctrlList[-2].wInvMatrix
+
+		wt_add = utils.matrixBlend(
+							global_mm.matrixSum,
+							local_offset_mtx,
+							self.ctrlList[-1].ctrl.spaceBlend,
+							name='{}_space'.format(self.name)
+		)
+
+		global_dm = pm.createNode('decomposeMatrix', n='{}_space_dcmpM'.format(self.name))
+		wt_add.matrixSum >> global_dm.inputMatrix
+		global_dm.outputRotate >> self.ctrlList[-1].null.rotate
 	# end def build():
 # end class SpaceSwitchChain():
