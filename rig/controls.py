@@ -60,6 +60,16 @@ class control(object):
 			return None
 	# end def shape():
 
+	@property
+	def wMatrix(self):
+		return self.ctrl.worldMatrix[0].get()
+	# end def wMatrix():
+
+	@property
+	def wInvMatrix(self):
+		return self.ctrl.worldInverseMatrix[0].get()
+	# end def wInvMatrix():
+
 	def makeAttr(self, **kwargs):
 		return utils.makeAttr(self.ctrl, **kwargs)
 	# end def makeAttr():
