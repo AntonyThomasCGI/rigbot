@@ -599,7 +599,13 @@ def matrixConstraint(parent_node, *args, **kwargs):
 	# if not maintaining offset, no complicated set up required, just connect worldMatrix to all children.
 	if not maintain_offset:
 		dcmp_m = pm.createNode('decomposeMatrix', n='{}_const_dcmpM'.format(name))
-		parent_matrix >> dcmp_m.inputMatrix
+		if inverse_parent is not None:
+			mult_m = pm.createNode('multMatrix', n='{}_const_multM'.format(name))
+			parent_matrix >> mult_m.matrixIn[0]
+			inverse_parent >> mult_m.matrixIn[1]
+			mult_m.matrixSum >> dcmp_m.inputMatrix
+		else:
+			parent_matrix >> dcmp_m.inputMatrix
 		connectDecomposeToNodes(dcmp_m, children)
 		return
 
