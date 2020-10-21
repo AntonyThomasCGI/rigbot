@@ -639,6 +639,49 @@ def matrixConstraint(parent_node, *args, **kwargs):
 # end matrixConstraint():
 
 
+def matrixBlend(input_a, input_b, blend_attr, name=None):
+	"""
+	Creates weighted add matrix set up for blending between matrices.
+
+	:param input_a:  `Attribute (Matrix)` or `Matrix` first input to blend.
+	:param input_b:  `Attribute (Matrix)` or `Matrix` second input to blend.
+	:param blend_attr:  `Attribute` blend from this attribute.
+	:param name:  `str` Prefix name for nodes, will use blend_attr node name by default.
+
+	return  `PyNode` of wtAddMatrix node
+	"""
+	for input in [input_a, input_b]:
+		if type(input).__name__ == 'Attribute':
+			if not type(input.get()).__name__ == 'Matrix':
+				raise TypeError('--Input attribute: {} is not a matrix plug'.format(input))
+		else:
+			if not type(input).__name__ == 'Matrix':
+				raise TypeError('--Input: {} is not of type `Matrix`'.format(input))
+
+	if name is None:
+		name = '{}_blnd'.format(blend_attr.node())
+
+	rvrs = pm.createNode('reverse', n='{}_rvrs'.format(name))
+	wt_add = pm.createNode('wtAddMatrix', n='{}_wtAdM'.format(name))
+
+	if type(input_a).__name__ == 'Matrix':
+		wt_add.wtMatrix[0].m.set(input_a)
+	else:
+		input_a >> wt_add.wtMatrix[0].m
+
+	if type(input_b).__name__ == 'Matrix':
+		wt_add.wtMatrix[1].m.set(input_b)
+	else:
+		input_b >> wt_add.wtMatrix[1].m
+
+	blend_attr >> rvrs.inputX
+	rvrs.outputX >> wt_add.wtMatrix[0].w
+	blend_attr >> wt_add.wtMatrix[1].w
+
+	return wt_add
+# end def matrixBlend():
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # 											RIG BOT UTILITY FUNCTIONS
 # ----------------------------------------------------------------------------------------------------------------------
