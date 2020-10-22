@@ -879,6 +879,7 @@ def deleteRigBotMetadataNode():
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# TODO: doesn't pick up nodes between ctrls and nulls eg; reverse nodes for blends.
 def getModuleNodes(module_grp):
 	"""
 	Get all nodes associated with a module.  Requires correct module group structure.
