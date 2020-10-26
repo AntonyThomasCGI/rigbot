@@ -64,10 +64,20 @@ class Colours:
 	# end def get_linear_value():
 
 	@staticmethod
+	def get_value(colour, space='sRGB'):
+		if space == 'sRGB':
+			return Colours.get_rgb_value(colour)
+		elif space == 'linear':
+			return Colours.get_linear_value(colour)
+		else:
+			raise ValueError('--Unknown colour space: {}.'.format(space))
+	# end def get_value():
+
+	@staticmethod
 	def list():
 		print('Available colours are:')
 		for key in Colours._colourRGB:
-			print key
+			print(key)
 	# end def list():
 # end class Colours:
 
