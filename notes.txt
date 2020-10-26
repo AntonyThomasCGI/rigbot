@@ -24,6 +24,9 @@
 > ui has dev templates?
 
 
+> Might be good to have Scaffold equivilent for getting module info once it is built and sending to Modules to still use
+    util functions etc. in component classes.
+
 
 
 inspo
