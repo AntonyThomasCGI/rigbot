@@ -63,7 +63,16 @@ class ModuleBase(object):
 	# end def __len__():
 
 	def validateChain(self):
-		pass
+		"""
+		Checks if chain is valid for this component.
+		:return: `List` of errors, [] if chain can be validated.
+		"""
+		errors = []
+		if not self.chain:
+			errors.append('Chain does not exist.')
+		if not pm.pluginInfo('matrixNodes', query=True, loaded=True):
+			errors.append('This component requires matrixNodes plugin to be loaded.')
+		return errors
 	# end validateChain():
 
 	def registerModule(self):
@@ -201,6 +210,10 @@ class ModuleBase(object):
 
 	@property
 	def globalPlug(self):
+		"""
+		Gets global ctrl plug for component.
+		:return:  `Attribute`
+		"""
 		if self.modGlobals['modInput'].hasAttr('RB_World'):
 			return self.modGlobals['modInput'].attr('RB_World')
 		else:
@@ -208,8 +221,25 @@ class ModuleBase(object):
 	# end def globalPlug():
 
 	@property
+	def cogPlug(self):
+		"""
+		Gets cog pivot ctrl plug for component.
+		:return:  `Attribute`
+		"""
+		if self.modGlobals['modInput'].hasAttr('RB_Cog'):
+			return self.modGlobals['modInput'].attr('RB_Cog')
+		else:
+			return None
+	# end def cogPlug():
+
+	@property
 	def ctrlList(self):
+		"""
+		Get controllers as a list instead of dictionary.
+		:return:  `List`
+		"""
 		return self.controllers.values()
+	# end def ctrlList():
 
 	# ------------------------------------------------------------------------------------------------------------------
 	# 												utility functions
@@ -226,4 +256,17 @@ class ModuleBase(object):
 
 		return self.globalPlug
 	# end def makeGlobalSocket():
+
+	def makeCogSocket(self):
+		"""
+		Add rig world space socket to module input null for modules that need world space ctrls such as ik handles.
+		:return: PyNode attribute plug
+		"""
+		utils.makeAttr(self.modGlobals['modInput'], name='RB_Cog', at='matrix')
+		cog_pivot_ctrl = pm.PyNode('{}_{}'.format(user.prefs['pivot-ctrl-name'], user.prefs['ctrl-suffix']))
+
+		cog_pivot_ctrl.worldMatrix[0] >> self.modGlobals['modInput'].RB_World
+
+		return self.globalPlug
+	# end def makeCogSocket():
 # end class ModuleBase():
