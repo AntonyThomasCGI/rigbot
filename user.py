@@ -32,6 +32,8 @@ prefs = {
 
 	'left-prefix'			: 'L',
 	'right-prefix'			: 'R',
+
+	'viewport-colour-space'	: 'sRGB',
 }
 
 # TODO: node naming convention pref? ^
