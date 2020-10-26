@@ -82,11 +82,11 @@ class _Root(ModuleBase):
 			pm.delete(root_shape)
 		self.root.useOutlinerColor.set(0)
 
-		utils.setOverrideColour('grey', self.controllers['root'])
+		utils.setOverrideColour(self.controllers['root'], colour='grey')
 		utils.scaleCtrlShapes(self.controllers['root'], scale_mult=45, line_width=-1)
 
 		utils.scaleCtrlShapes(self.controllers['root2'], scale_mult=10.2, line_width=2)
-		utils.setOverrideColour('light-orange', self.controllers['root2'])
+		utils.setOverrideColour(self.controllers['root2'], colour='light-orange')
 
 		pm.delete(self.chain[1])
 	# end def postBuild():

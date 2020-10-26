@@ -31,6 +31,7 @@ class SpaceSwitchChain(SimpleFk):
 		super(SpaceSwitchChain, self).preBuild()
 
 		self.makeGlobalSocket()
+
 		self.ctrlList[-1].makeAttr(name='spaceBlend', nn='Space Blend GLOBAL / LOCAL', max=0, min=1)
 	# end def preBuild():
 

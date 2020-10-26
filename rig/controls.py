@@ -35,7 +35,7 @@ class control(object):
 				p=data.controllerShapes[shape],
 				n=(self.name + '_' + user.prefs['ctrl-suffix']))
 
-		utils.setOverrideColour(colour, self.ctrl)
+		utils.setOverrideColour(self.ctrl, c=colour)
 
 		utils.scaleCtrlShapes(self.ctrl, scale_mult=size, line_width=line_width)
 
@@ -46,7 +46,7 @@ class control(object):
 			num = '{:02d}'.format(i+1) if offsets > 1 else ''
 			self.offsets.append(pm.spaceLocator(n=self.ctrl + '_offset%s_loc' % num))
 
-			utils.setOverrideColour('purple', self.offsets)
+			utils.setOverrideColour(self.offsets, 'purple')
 
 		utils.parentByList([self.ctrl, self.offsets, self.null])
 	# end def __init__():

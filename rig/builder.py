@@ -19,6 +19,10 @@ class ScaffoldException(Exception):
 	pass
 
 
+class ValidationException(Exception):
+	pass
+
+
 class Scaffold(object):
 
 	_available_modules = utils.getFilteredDir('modules', ignore_private=False) + [' ']
@@ -246,10 +250,10 @@ class Scaffold(object):
 		pm.delete(curv)
 
 		# setting colours
-		utils.setOverrideColour(user.prefs['default-jnt-colour'], chain)
-		utils.setOverrideColour(user.prefs['module-root-colour'], chain[0])
-		utils.setOutlinerColour(user.prefs['module-root-colour'], chain[0])
-		utils.setOverrideColour(user.prefs['default-jnt-colour'], shape)
+		utils.setOverrideColour(chain, c=user.prefs['default-jnt-colour'])
+		utils.setOverrideColour(chain[0], c=user.prefs['module-root-colour'])
+		utils.setOutlinerColour(chain[0], c=user.prefs['module-root-colour'])
+		utils.setOverrideColour(shape, c=user.prefs['default-jnt-colour'])
 
 		all_modules = utils.getFilteredDir('modules')
 		all_modules.append(' ')
@@ -276,6 +280,8 @@ def batchBuild(scaffolds=None):
 	:param modules: list of scaffold objects to rig, if not specified attempts to batch rig every module in scene.
 	:return: None
 	"""
+	errors = []
+
 	if not scaffolds:
 		scaffolds = getModules()
 
@@ -312,6 +318,13 @@ def batchBuild(scaffolds=None):
 				'// Warning: Skipping {}, module type does not appear to be implemented or is missing source code.'.
 					format(scaffold.moduleType)
 			)
+
+
+	for module in modules:
+		errors += module.validateChain()
+
+	if errors:
+		raise ValidationException('--Errors while validating chain:\n{}'.format(errors))
 
 	print('>> Batch Build: Build Starting...')
 	for module in modules:
