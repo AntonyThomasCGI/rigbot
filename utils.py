@@ -46,19 +46,29 @@ def makeJointChain(length, name, suffix='jnt', rad=1):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# TODO: flag to use linear colour, same with setOutLinerColour()
-def setOverrideColour(colour, *args):
+def setOverrideColour(*args, **kwargs):
 	"""
-	Set DAG node override colour
+	Set node viewport override colour.
 
-	:param colour: `str or RGB` colour to set override colour
-	:param args: `node or string` nodes to apply change
+	:param args: `PyNode` or `str` Node(s) to apply change.
+
+	:param kwargs:	colour | c: `str` or `[R,G,B]` Colour to set override.
+					colourSpace | cs: `str` default = 'sRGB', Colour space to use.
+	return None
 	"""
+	colour = kwargs.pop('colour', kwargs.pop('c', None))
+	colour_space = kwargs.pop('colourSpace', kwargs.pop('cs', 'sRGB'))
+
+	if colour is None:
+		raise ValueError('--colour flag must be specified.')
+
+	if kwargs:
+		raise ValueError('--Unknown argument(s): {}'.format(kwargs))
 
 	item_ls = makePyNodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
 
 	if isinstance(colour, basestring):
-		colour = data.Colours.get_rgb_value(colour)
+		colour = data.Colours.get_value(colour, space=colour_space)
 
 	for item in item_ls:
 		try:
@@ -82,18 +92,29 @@ def setOverrideColour(colour, *args):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-def setOutlinerColour(colour, *args):
+def setOutlinerColour(*args, **kwargs):
 	"""
-	Set node outliner colour, uses linear colour value always as outliner applies no colour LUTs.
+	Set node outliner colour, uses linear colour value by default as outliner applies no colour LUTs.
 
-	:param colour: colour to set outliner colour
 	:param args: nodes to apply change
+
+	:param kwargs:	colour | c: `str` or `[R,G,B]` Colour to set override.
+					colourSpace | cs: `str` default = 'linear', Colour space to use.
+	return None
 	"""
+	colour = kwargs.pop('colour', kwargs.pop('c', None))
+	colour_space = kwargs.pop('colourSpace', kwargs.pop('cs', 'sRGB'))
+
+	if colour is None:
+		raise ValueError('--Keyword argument: colour must be specified.')
+
+	if kwargs:
+		raise ValueError('--Unknown argument(s): {}'.format(kwargs))
 
 	item_ls = makePyNodeList(args, type=['transform', 'joint', 'nurbsCurve', 'locator'])
 
 	if isinstance(colour, basestring):
-		colour = data.Colours.get_linear_value(colour)
+		colour = data.Colours.get_value(colour, space=colour_space)
 
 	for item in item_ls:
 		item.useOutlinerColor.set(1)
@@ -645,6 +666,7 @@ def matrixConstraint(parent_node, *args, **kwargs):
 # end matrixConstraint():
 
 
+# TODO: this doesn't maintain offset hmmm should it?
 def matrixBlend(input_a, input_b, blend_attr, name=None):
 	"""
 	Creates weighted add matrix set up for blending between matrices.
@@ -732,8 +754,8 @@ def makeRoot():
 		scaleCtrlShapes(ctrl, scale_mult=1.43, line_width=3)
 
 		ctrl_shape = ctrl.getChildren()[0]
-		setOverrideColour(user.prefs['module-root-colour'], [root_jnt, ctrl_shape])
-		setOutlinerColour(user.prefs['module-root-colour'], root_jnt)
+		setOverrideColour(root_jnt, ctrl_shape, c=user.prefs['module-root-colour'])
+		setOutlinerColour(root_jnt, c=user.prefs['module-root-colour'])
 
 		pm.parent(ctrl_shape, root_jnt, r=True, s=True)
 		pm.delete(ctrl)
@@ -749,8 +771,8 @@ def makeRoot():
 
 		cog_place.drawStyle.set(1)
 		cog_place.radius.set(0.001)
-		setOverrideColour('pink', cog_place)
-		setOutlinerColour('pink', cog_place)
+		setOverrideColour(cog_place, c='pink')
+		setOutlinerColour(cog_place, c='pink')
 
 		display = [pm.createNode('joint', n='cog_display_{:02d}'.format(i)) for i in range(2)]
 
