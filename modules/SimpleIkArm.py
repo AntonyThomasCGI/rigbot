@@ -21,10 +21,20 @@ class SimpleIkArm(ModuleBase):
 		super(SimpleIkArm, self).__init__(*args)
 	#  end def __init__():
 
+	def validateChain(self):
+		errors = []
+		if len(self) != 3:
+			errors.append('SimpleIkArm can only operate on 3 joints.')
+		if not pm.pluginInfo('mayaMathNodes', query=True, loaded=True):
+			errors.append('This component requires mayaMathNodes plugin to be loaded.')
+		return errors
+	# end def validateChain():
+
 	def preBuild(self):
 		super(SimpleIkArm, self).preBuild()
 
 		self.makeGlobalSocket()
+		self.makeCogSocket()
 
 		self.controllers['base_ctrl'] = \
 			ctrl.control(
@@ -53,6 +63,7 @@ class SimpleIkArm(ModuleBase):
 			{'name': 'humerus', 'dv': abs(self.chain[1].translateX.get())},
 			{'name': 'radius', 'dv': abs(self.chain[2].translateX.get())},
 			{'name': 'stretch', 'at': 'bool'},
+			{'name': 'spaceBlend', 'nn': 'Space Blend GLOBAL / LOCAL', 'max': 0, 'min': 1}
 		]
 		for tag in tags:
 			utils.makeAttr(self.controllers['ik_ctrl'].ctrl, **tag)
@@ -67,13 +78,25 @@ class SimpleIkArm(ModuleBase):
 		pm.xform(self.controllers['pv_ctrl'].null, t=pole_vector_position, ws=True)
 
 		# TODO: space switches not constraints.
-		utils.matrixConstraint(
-			self.globalPlug,
-			self.controllers['ik_ctrl'].null,
-			self.controllers['pv_ctrl'].null,
-			ss='xyz',
-			ip=self.modGlobals['modCtrls']
+		wt_add = \
+			utils.matrixBlend(
+						self.globalPlug,
+						self.cogPlug,
+						self.controllers['ik_ctrl'].ctrl.spaceBlend,
+						name='{}_ik_space'.format(self.name)
 		)
+		# utils.matrixConstraint(
+		# 	self.globalPlug,
+		# 	self.controllers['ik_ctrl'].null,
+		# 	self.controllers['pv_ctrl'].null,
+		# 	ss='xyz',
+		# 	ip=self.modGlobals['modCtrls']
+		# )
+		dcmp = pm.createNode('decomposeMatrix', n='{}_ik_space_dcmpM'.format(self.name))
+
+		wt_add.matrixSum >> dcmp.inputMatrix
+		dcmp.outputRotate >> self.controllers['ik_ctrl'].null.rotate
+		dcmp.outputTranslate >> self.controllers['ik_ctrl'].null.translate
 	# end def preBuild():
 
 	def build(self):
