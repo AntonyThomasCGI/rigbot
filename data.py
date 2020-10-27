@@ -75,7 +75,7 @@ class Colours:
 
 	@staticmethod
 	def list():
-		print('Available colours are:')
+		print('\nAvailable colours are:')
 		for key in Colours._colourRGB:
 			print(key)
 	# end def list():
