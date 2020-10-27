@@ -17,6 +17,10 @@ import pymel.core as pm
 
 class SimpleIkArm(ModuleBase):
 
+	_uses_global_plug = True
+	_uses_cog_plug = True
+	_controls_driver = 'RB_Cog'
+
 	def __init__(self, *args):
 		super(SimpleIkArm, self).__init__(*args)
 	#  end def __init__():
@@ -32,9 +36,6 @@ class SimpleIkArm(ModuleBase):
 
 	def preBuild(self):
 		super(SimpleIkArm, self).preBuild()
-
-		self.makeGlobalSocket()
-		self.makeCogSocket()
 
 		self.controllers['base_ctrl'] = \
 			ctrl.control(
@@ -77,22 +78,30 @@ class SimpleIkArm(ModuleBase):
 
 		pm.xform(self.controllers['pv_ctrl'].null, t=pole_vector_position, ws=True)
 
-		# TODO: space switches not constraints.
+		base_inv_m = pm.createNode('inverseMatrix', n='{0}_cog_invM'.format(self.name))
+		self.cogPlug >> base_inv_m.inputMatrix
+
+		utils.matrixConstraint(
+								self.socketPlug,
+								self.controllers['base_ctrl'].null,
+								inverseParent=base_inv_m.outputMatrix,
+								ss='xyz'
+		)
+
+		global_mm = pm.createNode('multMatrix', n='{0}_ik_global_multM'.format(self.name))
+		global_mm.matrixIn[0].set(self.controllers['ik_ctrl'].wMatrix)
+
+		self.globalPlug >> global_mm.matrixIn[1]
+		self.modGlobals['modCtrls'].inverseMatrix >> global_mm.matrixIn[2]
+
 		wt_add = \
 			utils.matrixBlend(
-						self.globalPlug,
-						self.cogPlug,
+						global_mm.matrixSum,
+						self.controllers['ik_ctrl'].null.matrix.get(),
 						self.controllers['ik_ctrl'].ctrl.spaceBlend,
 						name='{}_ik_space'.format(self.name)
 		)
-		# utils.matrixConstraint(
-		# 	self.globalPlug,
-		# 	self.controllers['ik_ctrl'].null,
-		# 	self.controllers['pv_ctrl'].null,
-		# 	ss='xyz',
-		# 	ip=self.modGlobals['modCtrls']
-		# )
-		dcmp = pm.createNode('decomposeMatrix', n='{}_ik_space_dcmpM'.format(self.name))
+		dcmp = pm.createNode('decomposeMatrix', n='{0}_ik_space_dcmpM'.format(self.name))
 
 		wt_add.matrixSum >> dcmp.inputMatrix
 		dcmp.outputRotate >> self.controllers['ik_ctrl'].null.rotate
