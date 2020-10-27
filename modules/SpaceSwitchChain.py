@@ -20,8 +20,13 @@ import pymel.core as pm
 # - every other joint blends with space switch
 # - fk functionality when head is in local
 
+# TODO: blend between actual up vector somehow?
+# TODO: actually this is just straight up broken euler rotation problem (rotate y on straight up chain breaks)
+
 
 class SpaceSwitchChain(SimpleFk):
+
+	_uses_global_plug = True
 
 	def __init__(self, *args):
 		super(SpaceSwitchChain, self).__init__(*args)
@@ -29,8 +34,6 @@ class SpaceSwitchChain(SimpleFk):
 
 	def preBuild(self):
 		super(SpaceSwitchChain, self).preBuild()
-
-		self.makeGlobalSocket()
 
 		self.ctrlList[-1].makeAttr(name='spaceBlend', nn='Space Blend GLOBAL / LOCAL', max=0, min=1)
 	# end def preBuild():
