@@ -14,27 +14,28 @@
 debug = True
 
 # preferences
-prefs = {
-	'root-joint'			: 'root_BIND',
-	'bind-skeleton-suffix'	: 'BIND',
-	'default-jnt-colour'	: 'grey-blue',
-	'module-root-colour'	: 'light-orange',
+prefs = \
+	{
+		'root-joint'			: 'root_BIND',
+		'bind-skeleton-suffix'	: 'BIND',
+		'default-jnt-colour'	: 'grey-blue',
+		'module-root-colour'	: 'light-orange',
 
-	'module-group-name'		: 'modules',
+		'module-group-name'		: 'modules',
 
-	'root-ctrl-name'		: 'GOD',
-	'root2-ctrl-name'		: 'GOD_2',
-	'cog-ctrl-name'			: 'cog',
-	'pivot-ctrl-name'		: 'cog_pivot',
-	'ctrl-suffix'			: 'ctrl',
-	'num-offset-ctrls'		: 0,
-	'default-line-width'	: 2,
+		'root-ctrl-name'		: 'GOD',
+		'root2-ctrl-name'		: 'GOD_2',
+		'cog-ctrl-name'			: 'cog',
+		'pivot-ctrl-name'		: 'cog_pivot',
+		'ctrl-suffix'			: 'ctrl',
+		'num-offset-ctrls'		: 0,
+		'default-line-width'	: 2,
 
-	'left-prefix'			: 'L',
-	'right-prefix'			: 'R',
+		'left-prefix'			: 'L',
+		'right-prefix'			: 'R',
 
-	'viewport-colour-space'	: 'sRGB',
-}
+		'viewport-colour-space'	: 'sRGB',
+	}
 
 # TODO: node naming convention pref? ^
 
