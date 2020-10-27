@@ -24,6 +24,9 @@ class ModuleBase(object):
 	# TODO: lock inheritsTransform
 
 	_has_dag_rig = False
+	_uses_global_plug = False
+	_uses_cog_plug = False
+	_controls_driver = 'RB_Socket'
 
 	def __init__(self, scaffold_obj):
 
@@ -90,9 +93,15 @@ class ModuleBase(object):
 
 		utils.makeAttr(self.modGlobals['modOutput'], name='RB_Output', at='matrix', multi=True)
 
-		# make connections
+		# global plugs
+		if self._uses_global_plug:
+			self._makeGlobalSocket()
+		if self._uses_cog_plug:
+			self._makeCogSocket()
+
 		utils.makeAttr(self.modGlobals['modInput'], name='RB_Socket', at='matrix')
 
+		# make connections
 		if self.socket.shortName() == user.prefs['root-joint']:
 			pivot_name = '{}_{}'.format(user.prefs['pivot-ctrl-name'], user.prefs['ctrl-suffix'])
 			if pm.objExists(pivot_name):
@@ -103,7 +112,8 @@ class ModuleBase(object):
 			self.socket.worldMatrix[0] >> self.modGlobals['modInput'].RB_Socket
 
 		self.socketDcmp = pm.createNode('decomposeMatrix', n=self.name + '_socket_dcmpM')
-		self.modGlobals['modInput'].RB_Socket >> self.socketDcmp.inputMatrix
+
+		self.modGlobals['modInput'].attr(self._controls_driver) >> self.socketDcmp.inputMatrix
 
 		self.socketDcmp.outputTranslate >> self.modGlobals['modCtrls'].translate
 		self.socketDcmp.outputRotate >> self.modGlobals['modCtrls'].rotate
@@ -166,18 +176,17 @@ class ModuleBase(object):
 		contain.addNode(utils.getModuleNodes(self.modGlobals['modRoot']))
 
 		publish_count = 1
-		for c in self.controllers.values():
+		for control in self.controllers.values():
 			publish_plug = contain.attr('publishedNodeInfo')
 			this_publish = publish_plug.elementByLogicalIndex(publish_count)
 
-			c.ctrl.message >> this_publish.publishedNode
+			control.ctrl.message >> this_publish.publishedNode
 
 			publish_count += 1
-
-			for o in c.offsets:  # publish ctrl offsets if any
+			for offset in control.offsets:  # publish ctrl offsets if any
 				this_offset_publish = publish_plug.elementByLogicalIndex(publish_count)
 
-				o.message >> this_offset_publish.publishedNode
+				offset.message >> this_offset_publish.publishedNode
 
 				publish_count += 1
 
@@ -214,10 +223,10 @@ class ModuleBase(object):
 		Gets global ctrl plug for component.
 		:return:  `Attribute`
 		"""
-		if self.modGlobals['modInput'].hasAttr('RB_World'):
+		if self.modGlobals['modInput'].hasAttr('RB_World') and self._uses_global_plug:
 			return self.modGlobals['modInput'].attr('RB_World')
 		else:
-			return None
+			raise ModuleBaseException('--Plug does not exist or private attribute _uses_global_plug not set.')
 	# end def globalPlug():
 
 	@property
@@ -226,10 +235,10 @@ class ModuleBase(object):
 		Gets cog pivot ctrl plug for component.
 		:return:  `Attribute`
 		"""
-		if self.modGlobals['modInput'].hasAttr('RB_Cog'):
+		if self.modGlobals['modInput'].hasAttr('RB_Cog') and self._uses_cog_plug:
 			return self.modGlobals['modInput'].attr('RB_Cog')
 		else:
-			return None
+			raise ModuleBaseException('--Plug does not exist or private attribute _uses_cog_plug not set.')
 	# end def cogPlug():
 
 	@property
@@ -242,9 +251,9 @@ class ModuleBase(object):
 	# end def ctrlList():
 
 	# ------------------------------------------------------------------------------------------------------------------
-	# 												utility functions
+	# 												private functions
 	# ------------------------------------------------------------------------------------------------------------------
-	def makeGlobalSocket(self):
+	def _makeGlobalSocket(self):
 		"""
 		Add rig world space socket to module input null for modules that need world space ctrls such as ik handles.
 		:return: PyNode attribute plug
@@ -253,11 +262,9 @@ class ModuleBase(object):
 		rig_global_ctrl = pm.PyNode('{}_{}'.format(user.prefs['root2-ctrl-name'], user.prefs['ctrl-suffix']))
 
 		rig_global_ctrl.worldMatrix[0] >> self.modGlobals['modInput'].RB_World
-
-		return self.globalPlug
 	# end def makeGlobalSocket():
 
-	def makeCogSocket(self):
+	def _makeCogSocket(self):
 		"""
 		Add rig world space socket to module input null for modules that need world space ctrls such as ik handles.
 		:return: PyNode attribute plug
@@ -265,8 +272,6 @@ class ModuleBase(object):
 		utils.makeAttr(self.modGlobals['modInput'], name='RB_Cog', at='matrix')
 		cog_pivot_ctrl = pm.PyNode('{}_{}'.format(user.prefs['pivot-ctrl-name'], user.prefs['ctrl-suffix']))
 
-		cog_pivot_ctrl.worldMatrix[0] >> self.modGlobals['modInput'].RB_World
-
-		return self.globalPlug
+		cog_pivot_ctrl.worldMatrix[0] >> self.modGlobals['modInput'].RB_Cog
 	# end def makeCogSocket():
 # end class ModuleBase():
